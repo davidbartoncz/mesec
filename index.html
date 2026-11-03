@@ -170,7 +170,7 @@ input[type=date]{min-height:48px}
 .fab{position:fixed;right:max(18px,calc(50% - 302px));bottom:calc(76px + env(safe-area-inset-bottom,0px));width:58px;height:58px;border-radius:50%;border:0;background:var(--ink);color:var(--on-ink);font-size:32px;line-height:1;box-shadow:0 6px 18px rgba(10,30,24,.28);z-index:6;cursor:pointer}
 .fab[hidden]{display:none}
 nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
-nav.tabs .in{max-width:640px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr)}
+nav.tabs .in{max-width:640px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr)}
 nav.tabs button{appearance:none;border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0 7px;font-size:11.5px;color:var(--muted);cursor:pointer}
 nav.tabs button svg{width:24px;height:24px}
 nav.tabs button.on{color:var(--ink);font-weight:600}
@@ -187,6 +187,23 @@ svg.i{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke
 .sheet .panel{background:var(--bg)}
 .sheet .list{background:var(--bg)}
 .sheet .chip.on{background:var(--bg)}
+.occ{padding:12px 14px;border-top:1px solid var(--rule)}
+.list>.occ:first-child{border-top:0}
+.occ-h{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.occ-h b{font-weight:600}
+.mchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.mchip{appearance:none;display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:transparent;border-radius:18px;padding:6px 11px;font-size:14px;cursor:pointer;color:var(--ink)}
+.mchip span{color:var(--muted);font-variant-numeric:tabular-nums}
+.mchip.ok{border-color:var(--green);color:var(--green)}
+.mchip.ok span{color:var(--green)}
+.paybtn{appearance:none;border:0;background:var(--ink);color:var(--on-ink);border-radius:16px;padding:6px 12px;font-size:14px;font-weight:600;cursor:pointer}
+.okchip{appearance:none;border:0;background:transparent;color:var(--green);font-size:14px;font-weight:600;padding:6px 0;cursor:pointer}
+.mrow{display:flex;gap:8px;margin-top:8px;align-items:center}
+.mrow .share{width:110px;flex:none}
+.xbtn{appearance:none;border:0;background:var(--chip);color:var(--muted);width:40px;height:44px;border-radius:12px;font-size:20px;flex:none;cursor:pointer}
+.btns2{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.sheet .btns2 .btn{margin-top:0}
+.sheet .toggle{background:var(--bg);margin-top:14px}
 @keyframes up{from{transform:translateY(40px);opacity:.5}}
 
 #toast{position:fixed;left:50%;bottom:calc(150px + env(safe-area-inset-bottom,0px));transform:translate(-50%,10px);background:var(--ink);color:var(--on-ink);padding:10px 16px;border-radius:22px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:30;max-width:88vw;text-align:center}
@@ -205,10 +222,11 @@ svg.i{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke
 
 <main id="view"></main>
 
-<button class="fab" id="fab" onclick="App.addTx()" aria-label="Přidat pohyb">+</button>
+<button class="fab" id="fab" onclick="App.fab()" aria-label="Přidat">+</button>
 
 <nav class="tabs"><div class="in">
   <button data-v="tx" onclick="App.tab('tx')"><svg class="i" viewBox="0 0 24 24"><path d="M9 6h12M9 12h12M9 18h12"/><path d="M3.5 6h.01M3.5 12h.01M3.5 18h.01" stroke-width="3"/></svg>Pohyby</button>
+  <button data-v="subs" onclick="App.tab('subs')"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M9 15.5l2 2 4-4"/></svg>Pravidelné</button>
   <button data-v="stats" onclick="App.tab('stats')"><svg class="i" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9h-9z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15z"/></svg>Statistiky</button>
   <button data-v="assets" onclick="App.tab('assets')"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="14" rx="2.5"/><path d="M3 10.5h18"/><path d="M15.5 15h2.5"/><path d="M6 6l9-3 1 3"/></svg>Majetek</button>
 </div></nav>
@@ -272,6 +290,7 @@ function dayLabel(s){
 }
 function daysBetween(a, b){ return Math.round((parseD(b) - parseD(a)) / 864e5); }
 function pl(n, a, b, c){ return n === 1 ? a : (n >= 2 && n <= 4 ? b : c); }
+function zap(n, a, b, c){ return pl(n,'Zapsána','Zapsány','Zapsáno') + ' ' + n + ' ' + pl(n, a, b, c); }
 
 var NF = new Intl.NumberFormat('cs-CZ', {maximumFractionDigits:2});
 var NFC;
@@ -303,7 +322,7 @@ function sortTx(a, b){ return a.date < b.date ? 1 : a.date > b.date ? -1 : (a.id
 /* ---------- storage ---------- */
 function defaultState(){
   return {
-    v:1, currency:'Kč', accounts:[], tx:[], lastBackup:null, lastAcc:null, hideWealth:true,
+    v:1, currency:'Kč', accounts:[], tx:[], subs:[], lastBackup:null, lastAcc:null, hideWealth:true,
     cats:{
       expense: DEF_CATS.expense.map(function(c,i){ return {id:'e'+i, name:c[0], icon:c[1]}; }),
       income: DEF_CATS.income.map(function(c,i){ return {id:'i'+i, name:c[0], icon:c[1]}; })
@@ -320,6 +339,7 @@ function normalize(s){
   };
   out.accounts = Array.isArray(s.accounts) ? s.accounts : [];
   out.tx = Array.isArray(s.tx) ? s.tx : [];
+  out.subs = Array.isArray(s.subs) ? s.subs : [];
   if (!out.currency) out.currency = 'Kč';
   return out;
 }
@@ -362,7 +382,7 @@ function balances(upTo){
     if (upTo && t.date > upTo) return;
     var v = +t.amount || 0;
     if (t.type === 'expense') { if (t.acc in b) b[t.acc] -= v; }
-    else if (t.type === 'income' || t.type === 'reval') { if (t.acc in b) b[t.acc] += v; }
+    else if (t.type === 'income' || t.type === 'reval' || t.type === 'refund') { if (t.acc in b) b[t.acc] += v; }
     else if (t.type === 'transfer') { if (t.acc in b) b[t.acc] -= v; if (t.to in b) b[t.to] += v; }
   });
   return b;
@@ -378,6 +398,7 @@ function monthStats(ym){
     if (t.date.slice(0,7) !== ym) return;
     var v = +t.amount || 0, k = t.cat || 'none';
     if (t.type === 'expense') { m.exp += v; m.byCat[k] = (m.byCat[k] || 0) + v; }
+    else if (t.type === 'refund') { m.exp -= v; m.byCat[k] = (m.byCat[k] || 0) - v; }
     else if (t.type === 'income') { m.inc += v; m.byInc[k] = (m.byInc[k] || 0) + v; }
     else if (t.type === 'reval') { m.reval += v; }
   });
@@ -391,10 +412,10 @@ function series(months, accId){
   S.tx.forEach(function(x){
     var v = +x.amount || 0, d = 0;
     if (accId) {
-      if (x.acc === accId) d += (x.type === 'income' || x.type === 'reval') ? v : -v;
+      if (x.acc === accId) d += (x.type === 'income' || x.type === 'reval' || x.type === 'refund') ? v : -v;
       if (x.type === 'transfer' && x.to === accId) d += v;
     } else {
-      d = x.type === 'expense' ? -v : (x.type === 'income' || x.type === 'reval') ? v : 0;
+      d = x.type === 'expense' ? -v : (x.type === 'income' || x.type === 'reval' || x.type === 'refund') ? v : 0;
     }
     if (d) ev.push([x.date, d]);
   });
@@ -533,9 +554,10 @@ function txRow(t, ctx){
     var c = cat(t.cat);
     icon = c ? c.icon : (t.type === 'income' ? '💰' : '📦');
     title = esc(c ? c.name : 'Bez kategorie');
-    sub = ctx ? esc([dShort(t.date), t.note].filter(Boolean).join(', ')) : esc([t.note, a && a.name].filter(Boolean).join(', '));
+    var rf = t.type === 'refund' ? 'Vratka' : '';
+    sub = ctx ? esc([dShort(t.date), rf, t.note].filter(Boolean).join(', ')) : esc([rf, t.note, a && a.name].filter(Boolean).join(', '));
     amt = t.type === 'expense' ? money(-t.amount) : money(t.amount, true);
-    cls = t.type === 'income' ? 'pos' : '';
+    cls = (t.type === 'income' || t.type === 'refund') ? 'pos' : '';
   }
   return '<button class="row" onclick="App.editTx(\''+t.id+'\')"><span class="ico">'+icon+'</span><div class="main"><div class="t">'+title+'</div><div class="s">'+sub+'</div></div><div class="amt '+cls+'">'+amt+'</div></button>';
 }
@@ -588,7 +610,7 @@ function txListHtml(){
   } else {
     items = S.tx.filter(function(t){ return t.date.slice(0,7) === ui.txMonth; });
   }
-  if (ui.txFilter !== 'all') items = items.filter(function(t){ return ui.txFilter === 'transfer' ? (t.type === 'transfer' || t.type === 'reval') : t.type === ui.txFilter; });
+  if (ui.txFilter !== 'all') items = items.filter(function(t){ return ui.txFilter === 'transfer' ? (t.type === 'transfer' || t.type === 'reval') : ui.txFilter === 'expense' ? (t.type === 'expense' || t.type === 'refund') : t.type === ui.txFilter; });
   items.sort(sortTx);
   var h = q ? '<p class="muted small" style="margin:14px 2px 0">Nalezeno '+items.length+' '+pl(items.length,'pohyb','pohyby','pohybů')+' ve všech měsících</p>'
             : '<div class="mt"></div>' + monthNav('tx', ui.txMonth) + strip(monthStats(ui.txMonth));
@@ -597,7 +619,7 @@ function txListHtml(){
   items.forEach(function(t){ if (!cur || cur.d !== t.date) { cur = {d:t.date, items:[]}; groups.push(cur); } cur.items.push(t); });
   groups.forEach(function(g){
     var sum = 0;
-    g.items.forEach(function(t){ if (t.type === 'expense') sum -= t.amount; else if (t.type === 'income') sum += t.amount; });
+    g.items.forEach(function(t){ if (t.type === 'expense') sum -= t.amount; else if (t.type === 'income' || t.type === 'refund') sum += t.amount; });
     h += '<div class="dayhead"><span>'+dayLabel(g.d)+'</span><span class="num">'+(sum ? money(sum, true) : '')+'</span></div>';
     h += '<div class="list">' + g.items.map(function(t){ return txRow(t); }).join('') + '</div>';
   });
@@ -643,13 +665,14 @@ function vAssets(){
 function vStats(){
   if (!S.accounts.length) return vEmpty();
   var ym = ui.statMonth, m = monthStats(ym);
-  var list = Object.keys(m.byCat).map(function(k){ return {id:k, v:m.byCat[k], c:cat(k)}; }).sort(function(a,b){ return b.v - a.v; });
+  var list = Object.keys(m.byCat).map(function(k){ return {id:k, v:m.byCat[k], c:cat(k)}; }).filter(function(x){ return x.v > 0.005; }).sort(function(a,b){ return b.v - a.v; });
   list.forEach(function(x,i){ x.color = PALETTE[i % PALETTE.length]; });
+  var ctot = list.reduce(function(sm,x){ return sm + x.v; }, 0);
   var h = '<div class="mt"></div>' + monthNav('stat', ym) + strip(m);
   if (list.length) {
-    h += '<h2>Výdaje podle kategorií</h2><div class="panel donut-wrap">' + donut(list, m.exp) + '</div><div class="list">' +
+    h += '<h2>Výdaje podle kategorií</h2><div class="panel donut-wrap">' + donut(list, ctot) + '</div><div class="list">' +
       list.map(function(x){
-        return '<div class="row"><span class="dot" style="background:'+x.color+'"></span><div class="main"><div class="t">'+(x.c ? x.c.icon + ' ' + esc(x.c.name) : 'Bez kategorie')+'</div><div class="bar"><i style="width:'+(x.v/list[0].v*100).toFixed(1)+'%;background:'+x.color+'"></i></div></div><div class="amt-col"><div class="amt">'+money(x.v)+'</div><div class="s">'+pct(x.v/m.exp)+'</div></div></div>';
+        return '<div class="row"><span class="dot" style="background:'+x.color+'"></span><div class="main"><div class="t">'+(x.c ? x.c.icon + ' ' + esc(x.c.name) : 'Bez kategorie')+'</div><div class="bar"><i style="width:'+(x.v/list[0].v*100).toFixed(1)+'%;background:'+x.color+'"></i></div></div><div class="amt-col"><div class="amt">'+money(x.v)+'</div><div class="s">'+pct(x.v/ctot)+'</div></div></div>';
       }).join('') + '</div>';
   } else {
     h += '<div class="empty">V tomhle měsíci nejsou zapsané žádné výdaje.</div>';
@@ -698,14 +721,14 @@ function vSettings(){
 }
 
 /* ---------- render ---------- */
-var TITLES = {tx:'Pohyby', assets:'Majetek', stats:'Statistiky', settings:'Nastavení'};
+var TITLES = {subs:'Pravidelné platby', tx:'Pohyby', assets:'Majetek', stats:'Statistiky', settings:'Nastavení'};
 function render(){
   charts = {};
   var v = ui.view;
   $('#title').textContent = TITLES[v];
   document.querySelectorAll('nav.tabs button').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-v') === v); });
   $('#fab').hidden = (v === 'settings' || !S.accounts.length);
-  var fn = {tx:vTx, assets:vAssets, stats:vStats, settings:vSettings}[v];
+  var fn = {subs:vSubs, tx:vTx, assets:vAssets, stats:vStats, settings:vSettings}[v];
   $('#view').innerHTML = fn();
   bindCharts($('#view'));
 }
@@ -757,19 +780,22 @@ function pickCat(id){
 function txSheet(keep){
   var d = draft, isR = d.type === 'reval';
   function opts(sel){ return S.accounts.map(function(a){ return '<option value="'+a.id+'"'+(a.id === sel ? ' selected' : '')+'>'+tinfo(a).i+' '+esc(a.name)+'</option>'; }).join(''); }
-  var cats = d.type === 'expense' ? S.cats.expense : d.type === 'income' ? S.cats.income : [];
+  var cats = (d.type === 'expense' || d.type === 'refund') ? S.cats.expense : d.type === 'income' ? S.cats.income : [];
+  var linked = d.sub ? subById(d.sub) : null;
   var toSel = d.to || (S.accounts.filter(function(a){ return a.id !== d.acc; })[0] || {}).id;
-  var types = [['expense','Výdaj'],['income','Příjem'],['transfer','Převod']];
+  var types = [['expense','Výdaj'],['income','Příjem'],['transfer','Převod'],['refund','Vratka']];
   var html = '<form id="txf" onsubmit="App.saveTx(event)" autocomplete="off">' +
     '<h3 class="serif">' + (d.id ? (isR ? 'Změna hodnoty' : 'Upravit pohyb') : 'Nový pohyb') + '</h3>' +
     (isR ? '<p class="muted small">Přecenění nebo srovnání zůstatku. Nepočítá se do příjmů ani výdajů, jen do čistého jmění. Záporná částka znamená pokles.</p>'
          : '<div class="seg" style="margin-top:12px">' + types.map(function(x){ return '<button type="button" class="'+(d.type === x[0] ? 'on' : '')+'" onclick="App.setTxType(\''+x[0]+'\')">'+x[1]+'</button>'; }).join('') + '</div>') +
+    (d.type === 'refund' ? '<p class="muted small" style="margin:10px 2px 0">Peníze, které se ti vrátily za výdaj: podíl od kamaráda, vrácené zboží. Sníží výdaje ve zvolené kategorii.</p>' : '') +
+    (linked ? '<p class="muted small" style="margin:10px 2px 0">Patří k pravidelné platbě ' + esc(linked.icon + ' ' + linked.name) + ' (' + dShort(d.due) + ').</p>' : '') +
     '<div class="amount-wrap"><input name="amount" class="amount-input serif num" inputmode="decimal" placeholder="0" value="'+esc(d.amount)+'" aria-label="Částka"><span class="cur">'+esc(S.currency)+'</span></div>' +
     (cats.length ? '<div class="chips">' + cats.map(function(c){ return '<button type="button" class="chip'+(c.id === d.cat ? ' on' : '')+'" data-cat="'+c.id+'" onclick="App.pickCat(\''+c.id+'\')"><span class="e">'+c.icon+'</span>'+esc(c.name)+'</button>'; }).join('') + '</div>' : '') +
     '<label class="field"><span>'+(d.type === 'transfer' ? 'Z účtu' : 'Účet')+'</span><select name="acc">'+opts(d.acc)+'</select></label>' +
     (d.type === 'transfer' ? '<label class="field"><span>Na účet</span><select name="to">'+opts(toSel)+'</select></label>' : '') +
     '<label class="field"><span>Datum</span><input type="date" name="date" value="'+esc(d.date)+'" required></label>' +
-    '<label class="field"><span>Poznámka</span><input name="note" value="'+esc(d.note)+'" placeholder="'+(d.type === 'transfer' ? 'třeba Výběr z bankomatu' : d.type === 'income' ? 'třeba Výplata za říjen' : 'třeba Lidl, oběd s kolegy')+'"></label>' +
+    '<label class="field"><span>Poznámka</span><input name="note" value="'+esc(d.note)+'" placeholder="'+(d.type === 'transfer' ? 'třeba Výběr z bankomatu' : d.type === 'income' ? 'třeba Výplata za říjen' : d.type === 'refund' ? 'třeba Petr – podíl za Netflix' : 'třeba Lidl, oběd s kolegy')+'"></label>' +
     '<button class="btn" type="submit">'+(d.id ? 'Uložit změny' : 'Přidat pohyb')+'</button>' +
     (d.id ? '<button class="btn danger" type="button" onclick="App.delTx(\''+d.id+'\')">Smazat pohyb</button>' : '') +
     '</form>';
@@ -783,11 +809,12 @@ function saveTx(e){
   if (!isFinite(amt) || amt === 0) { toast('Zadej částku.'); return; }
   if (d.type !== 'reval') amt = Math.abs(amt);
   if (!d.date) { toast('Vyber datum.'); return; }
-  if ((d.type === 'expense' || d.type === 'income') && !d.cat) { toast('Vyber kategorii.'); return; }
+  if ((d.type === 'expense' || d.type === 'income' || d.type === 'refund') && !d.cat) { toast('Vyber kategorii.'); return; }
   if (d.type === 'transfer' && (!d.to || d.to === d.acc)) { toast('Převod musí jít mezi dvěma různými účty.'); return; }
   var t = {id:d.id || uid(), date:d.date, type:d.type, amount:Math.round(amt*100)/100, acc:d.acc, note:(d.note || '').trim()};
   if (d.type === 'transfer') t.to = d.to;
-  if (d.type === 'expense' || d.type === 'income') t.cat = d.cat;
+  if (d.type === 'expense' || d.type === 'income' || d.type === 'refund') t.cat = d.cat;
+  if (d.sub) { t.sub = d.sub; t.due = d.due; if (d.member) t.member = d.member; }
   var idx = -1;
   S.tx.forEach(function(x,i){ if (x.id === t.id) idx = i; });
   if (idx >= 0) S.tx[idx] = t; else S.tx.push(t);
@@ -894,6 +921,302 @@ function saveValue(e, id){
   toast('Uloženo: ' + (delta > 0 ? '+' : '−') + NF.format(Math.abs(delta)) + ' ' + S.currency);
 }
 
+/* ---------- recurring payments ---------- */
+var PERIODS = {
+  week:{n:'Týdně', m:0, f:52/12},
+  month:{n:'Měsíčně', m:1, f:1},
+  quarter:{n:'Čtvrtletně', m:3, f:1/3},
+  half:{n:'Pololetně', m:6, f:1/6},
+  year:{n:'Ročně', m:12, f:1/12}
+};
+var sd = null;
+function subById(id){ return (S.subs || []).filter(function(x){ return x.id === id; })[0] || null; }
+function dueAt(sub, k){
+  var d0 = parseD(sub.first);
+  if (sub.period === 'week') { var d = new Date(d0); d.setDate(d.getDate() + 7*k); return fmtD(d); }
+  var y = d0.getFullYear(), mo = d0.getMonth() + (PERIODS[sub.period] || PERIODS.month).m*k, day = d0.getDate();
+  var dim = new Date(y, mo+1, 0).getDate();
+  return fmtD(new Date(y, mo, Math.min(day, dim)));
+}
+function dues(sub, until){
+  var out = [], lim = sub.end && sub.end < until ? sub.end : until;
+  for (var k = 0; k < 2000; k++) { var d = dueAt(sub, k); if (d > lim) break; out.push(d); }
+  return out;
+}
+function nextDue(sub){
+  if (sub.end) return null;
+  var t = today();
+  for (var k = 0; k < 2000; k++) { var d = dueAt(sub, k); if (d >= t) return d; }
+  return null;
+}
+function lastDue(sub){ var p = dues(sub, today()); return p.length ? p[p.length-1] : sub.first; }
+function myShare(sub){ return (+sub.amount || 0) - (sub.members || []).reduce(function(sm,m){ return sm + (+m.share || 0); }, 0); }
+function myTx(sid, due){ return S.tx.filter(function(t){ return t.sub === sid && t.due === due && !t.member; })[0] || null; }
+function memberTx(sid, due, mid){ return S.tx.filter(function(t){ return t.sub === sid && t.due === due && t.member === mid; })[0] || null; }
+function memberDues(sub, mb, until){ return dues(sub, until).filter(function(d){ return !mb.since || d >= mb.since; }); }
+function owed(){
+  var map = {}, t = today();
+  (S.subs || []).forEach(function(sub){
+    (sub.members || []).forEach(function(mb){
+      memberDues(sub, mb, t).forEach(function(due){
+        if (memberTx(sub.id, due, mb.id)) return;
+        var key = mb.name.trim().toLowerCase();
+        if (!map[key]) map[key] = {key:key, name:mb.name.trim(), total:0, items:[]};
+        map[key].total += +mb.share || 0;
+        map[key].items.push({sid:sub.id, due:due, mid:mb.id});
+      });
+    });
+  });
+  return Object.keys(map).map(function(k){ return map[k]; }).sort(function(a,b){ return b.total - a.total; });
+}
+function subUnpaid(sub){
+  var n = 0, t = today();
+  (sub.members || []).forEach(function(mb){ memberDues(sub, mb, t).forEach(function(d){ if (!memberTx(sub.id, d, mb.id)) n++; }); });
+  return n;
+}
+function relDay(d){
+  var t = today(); if (d === t) return 'dnes';
+  var z = new Date(); z.setDate(z.getDate()+1); if (d === fmtD(z)) return 'zítra';
+  var x = parseD(d); return x.getDate() + '. ' + (x.getMonth()+1) + '.' + (x.getFullYear() !== new Date().getFullYear() ? ' ' + x.getFullYear() : '');
+}
+function subAcc(sub){ return acc(sub.acc) ? sub.acc : defaultAcc(); }
+function processAuto(){
+  var n = 0, t = today();
+  (S.subs || []).forEach(function(sub){
+    if (!sub.auto || sub.end) return;
+    sub.handled = sub.handled || [];
+    dues(sub, t).forEach(function(due){
+      if (sub.handled.indexOf(due) >= 0) return;
+      sub.handled.push(due);
+      if (myTx(sub.id, due)) return;
+      S.tx.push({id:uid(), date:due, type:'expense', amount:+sub.amount, acc:subAcc(sub), cat:sub.cat, note:sub.name, sub:sub.id, due:due});
+      n++;
+    });
+  });
+  return n;
+}
+function vSubs(){
+  if (!S.accounts.length) return vEmpty();
+  var all = S.subs || [], act = all.filter(function(x){ return !x.end; }), ended = all.filter(function(x){ return x.end; });
+  var monthly = 0, mine = 0;
+  act.forEach(function(x){ var f = (PERIODS[x.period] || PERIODS.month).f; monthly += x.amount*f; mine += myShare(x)*f; });
+  var ow = owed(), owTot = ow.reduce(function(sm,o){ return sm + o.total; }, 0);
+  var h = '<div class="strip mt">' +
+    '<div><div class="k">Za měsíc</div><div class="v num">' + money(Math.round(monthly)) + '</div></div>' +
+    '<div><div class="k">Tvůj podíl</div><div class="v num">' + money(Math.round(mine)) + '</div></div>' +
+    '<div><div class="k">Dluží ti</div><div class="v num ' + (owTot > 0 ? 'neg' : 'pos') + '">' + money(owTot) + '</div></div></div>';
+  if (ow.length) {
+    h += '<h2>Dluží ti</h2><div class="list">' + ow.map(function(o){
+      var names = [];
+      o.items.forEach(function(it){ var sb = subById(it.sid); if (sb && names.indexOf(sb.name) < 0) names.push(sb.name); });
+      return '<button class="row" data-k="' + esc(o.key) + '" onclick="App.owedSheet(this.getAttribute(\'data-k\'))"><span class="ico">👤</span><div class="main"><div class="t">' + esc(o.name) + '</div><div class="s">' + o.items.length + ' ' + pl(o.items.length,'platba','platby','plateb') + ': ' + esc(names.join(', ')) + '</div></div><div class="amt neg">' + money(o.total) + '</div></button>';
+    }).join('') + '</div>';
+  }
+  h += '<h2>Běžící platby</h2>';
+  if (act.length) {
+    act.sort(function(a,b){ var x = nextDue(a) || '9', y = nextDue(b) || '9'; return x < y ? -1 : x > y ? 1 : 0; });
+    h += '<div class="list">' + act.map(subRow).join('') + '</div>';
+  } else {
+    h += '<div class="empty">Zatím tu nic není. Přidej předplatné, nájem nebo jinou platbu, která se opakuje. Když se na ní podílí víc lidí, uvidíš tu, kdo ti už poslal svůj podíl.</div>';
+  }
+  h += '<button class="btn ghost mt" onclick="App.subForm()">Přidat pravidelnou platbu</button>';
+  if (ended.length) h += '<h2>Ukončené</h2><div class="list">' + ended.map(subRow).join('') + '</div>';
+  return h;
+}
+function subRow(x){
+  var nd = nextDue(x), un = subUnpaid(x), p = PERIODS[x.period] || PERIODS.month;
+  var s2 = x.end ? 'Ukončeno ' + dShort(x.end) : p.n + ', příště ' + relDay(nd);
+  if (un) s2 += '<br><span class="neg">čeká ' + un + ' ' + pl(un,'podíl','podíly','podílů') + '</span>';
+  return '<button class="row" onclick="App.subDetail(\'' + x.id + '\')"><span class="ico">' + esc(x.icon || '🔁') + '</span><div class="main"><div class="t">' + esc(x.name) + '</div><div class="s" style="white-space:normal">' + s2 + '</div></div>' +
+    '<div class="amt-col"><div class="amt">' + money(x.amount) + '</div>' + ((x.members || []).length ? '<div class="s">tvůj podíl ' + money(myShare(x)) + '</div>' : '') + '</div></button>';
+}
+function occBlock(x, due){
+  var t = today(), future = due > t, mt = myTx(x.id, due);
+  var head = future ? '<span class="muted small">naplánováno</span>'
+    : mt ? '<button class="okchip" onclick="App.editTx(\'' + mt.id + '\')">✓ Zapsáno</button>'
+    : '<button class="paybtn" onclick="App.myPay(\'' + x.id + '\',\'' + due + '\')">Zapsat platbu</button>';
+  var chips = (x.members || []).filter(function(mb){ return !mb.since || due >= mb.since; }).map(function(mb){
+    var paid = memberTx(x.id, due, mb.id);
+    return '<button class="mchip' + (paid ? ' ok' : '') + '" onclick="App.memberPay(\'' + x.id + '\',\'' + due + '\',\'' + mb.id + '\')">' + (paid ? '✓' : '○') + ' ' + esc(mb.name) + ' <span>' + money(mb.share) + '</span></button>';
+  }).join('');
+  return '<div class="occ"><div class="occ-h"><b>' + (future ? 'Příští platba ' : '') + dShort(due) + '</b>' + head + '</div>' + (chips ? '<div class="mchips">' + chips + '</div>' : '') + '</div>';
+}
+function subDetail(id){
+  var x = subById(id); if (!x) { closeSheet(); render(); return; }
+  var p = PERIODS[x.period] || PERIODS.month, a = acc(x.acc), c = cat(x.cat), nd = nextDue(x);
+  var past = dues(x, today()).reverse();
+  var blocks = (nd && nd > today() ? [nd] : []).concat(past.slice(0, 12));
+  var others = (+x.amount || 0) - myShare(x);
+  openSheet('<h3 class="serif">' + esc((x.icon || '🔁') + ' ' + x.name) + '</h3>' +
+    '<div class="muted small">' + p.n + (a ? ', z účtu ' + esc(a.name) : '') + (c ? ', ' + esc(c.name) : '') + (x.auto && !x.end ? ', zapisuje se automaticky' : '') + (x.end ? ', ukončeno ' + dShort(x.end) : '') + '</div>' +
+    '<div class="big serif num mt-s">' + money(x.amount) + '</div>' +
+    ((x.members || []).length ? '<div class="muted">Tvůj podíl ' + money(myShare(x)) + ', ostatní ' + money(others) + '</div>' : '') +
+    '<div class="btnrow"><button class="btn ghost" style="margin:0" onclick="App.subForm(\'' + id + '\')">Upravit</button><button class="btn ghost" style="margin:0" onclick="App.closeSheet()">Zavřít</button></div>' +
+    '<h2>Platby</h2>' + (blocks.length ? '<div class="list">' + blocks.map(function(d){ return occBlock(x, d); }).join('') + '</div>' +
+      (past.length > 12 ? '<p class="muted small center">Zobrazeno posledních 12 plateb.</p>' : '') : '<div class="empty">Zatím žádné platby.</div>') +
+    ((x.members || []).length ? '<p class="muted small">Klepnutím na jméno označíš, že ti podíl přišel. Zapíše se jako vratka na účet ' + esc(a ? a.name : '') + ' a sníží tvoje výdaje. Dalším klepnutím to vrátíš.</p>' : ''));
+}
+function myPay(sid, due){
+  var x = subById(sid); if (!x) return;
+  var t = today();
+  S.tx.push({id:uid(), date:due <= t ? due : t, type:'expense', amount:+x.amount, acc:subAcc(x), cat:x.cat, note:x.name, sub:sid, due:due});
+  x.handled = x.handled || []; if (x.handled.indexOf(due) < 0) x.handled.push(due);
+  save(); render(); subDetail(sid); toast('Platba zapsána');
+}
+function addMemberTx(x, due, mb){
+  S.tx.push({id:uid(), date:today(), type:'refund', amount:+mb.share, acc:subAcc(x), cat:x.cat, note:mb.name + ' – podíl ' + x.name, sub:x.id, due:due, member:mb.id});
+}
+function memberPay(sid, due, mid){
+  var x = subById(sid); if (!x) return;
+  var mb = (x.members || []).filter(function(m){ return m.id === mid; })[0]; if (!mb) return;
+  var paid = memberTx(sid, due, mid);
+  if (paid) {
+    if (!confirm('Zrušit platbu od ' + mb.name + ' (' + dShort(due) + ')? Smaže se i zapsaná vratka.')) return;
+    S.tx = S.tx.filter(function(t){ return t.id !== paid.id; });
+    toast('Platba zrušena');
+  } else {
+    addMemberTx(x, due, mb);
+    toast('Zapsáno: ' + mb.name + ' ' + NF.format(mb.share) + ' ' + S.currency);
+  }
+  save(); render(); subDetail(sid);
+}
+function owedSheet(key){
+  ui.owedKey = key;
+  var o = owed().filter(function(z){ return z.key === key; })[0];
+  if (!o) { closeSheet(); render(); toast('Všechno má zaplaceno'); return; }
+  ui.owedItems = o.items;
+  openSheet('<h3 class="serif">' + esc(o.name) + '</h3><div class="muted small">Dluží ti za ' + o.items.length + ' ' + pl(o.items.length,'platbu','platby','plateb') + '</div>' +
+    '<div class="big serif num mt-s neg">' + money(o.total) + '</div>' +
+    '<div class="list mt">' + o.items.map(function(it, i){
+      var x = subById(it.sid), mb = (x.members || []).filter(function(m){ return m.id === it.mid; })[0];
+      return '<div class="row"><span class="ico">' + esc(x.icon || '🔁') + '</span><div class="main"><div class="t">' + esc(x.name) + '</div><div class="s">' + dShort(it.due) + '</div></div><div class="amt">' + money(mb.share) + '</div><button class="paybtn" onclick="App.owedPay(' + i + ')">Přišlo</button></div>';
+    }).join('') + '</div>' +
+    '<button class="btn" onclick="App.owedPayAll()">Přišlo všechno (' + money(o.total) + ')</button>' +
+    '<p class="muted small">Každá platba se zapíše jako vratka s dnešním datem na účet, ze kterého předplatné platíš.</p>');
+}
+function owedPay(i){
+  var it = (ui.owedItems || [])[i]; if (!it) return;
+  var x = subById(it.sid), mb = x && (x.members || []).filter(function(m){ return m.id === it.mid; })[0];
+  if (!mb || memberTx(it.sid, it.due, it.mid)) return;
+  addMemberTx(x, it.due, mb); save(); render(); owedSheet(ui.owedKey); toast('Zapsáno');
+}
+function owedPayAll(){
+  var n = 0;
+  (ui.owedItems || []).forEach(function(it){
+    var x = subById(it.sid), mb = x && (x.members || []).filter(function(m){ return m.id === it.mid; })[0];
+    if (mb && !memberTx(it.sid, it.due, it.mid)) { addMemberTx(x, it.due, mb); n++; }
+  });
+  save(); closeSheet(); render(); toast(zap(n,'platba','platby','plateb'));
+}
+function defCat(){ var c = S.cats.expense.filter(function(x){ return x.name === 'Předplatné'; })[0] || S.cats.expense[0]; return c ? c.id : ''; }
+function subForm(id){
+  if (!S.accounts.length) { toast('Nejdřív přidej účet.'); accForm(); return; }
+  var x = id ? subById(id) : null;
+  if (x) {
+    sd = JSON.parse(JSON.stringify(x));
+    sd.amount = String(x.amount).replace('.', ',');
+    sd.members = sd.members.map(function(m){ m.share = String(m.share).replace('.', ','); return m; });
+    sd.active = !x.end;
+  } else {
+    sd = {id:null, name:'', icon:'🔁', amount:'', period:'month', first:today(), acc:defaultAcc(), cat:defCat(), auto:true, members:[], active:true};
+  }
+  subSheet();
+}
+function subSheet(focusLast){
+  var d = sd;
+  var accOpts = S.accounts.map(function(a){ return '<option value="' + a.id + '"' + (a.id === d.acc ? ' selected' : '') + '>' + tinfo(a).i + ' ' + esc(a.name) + '</option>'; }).join('');
+  var catOpts = S.cats.expense.map(function(c){ return '<option value="' + c.id + '"' + (c.id === d.cat ? ' selected' : '') + '>' + c.icon + ' ' + esc(c.name) + '</option>'; }).join('');
+  var perOpts = Object.keys(PERIODS).map(function(k){ return '<option value="' + k + '"' + (k === d.period ? ' selected' : '') + '>' + PERIODS[k].n + '</option>'; }).join('');
+  var rows = d.members.map(function(m, i){
+    return '<div class="mrow"><input class="mn" value="' + esc(m.name) + '" placeholder="Jméno" aria-label="Jméno"><input class="share" inputmode="decimal" value="' + esc(m.share) + '" placeholder="Podíl" aria-label="Podíl" oninput="App.subCalc()"><button type="button" class="xbtn" onclick="App.subDelMember(' + i + ')" aria-label="Odebrat">×</button></div>';
+  }).join('');
+  openSheet('<form id="subf" onsubmit="App.saveSub(event)" autocomplete="off">' +
+    '<h3 class="serif">' + (d.id ? 'Upravit pravidelnou platbu' : 'Nová pravidelná platba') + '</h3>' +
+    '<div class="addcat" style="margin-top:12px"><input name="icon" class="emo" maxlength="8" value="' + esc(d.icon) + '" aria-label="Ikona"><input name="nm" value="' + esc(d.name) + '" placeholder="třeba Netflix, Spotify, nájem" aria-label="Název"></div>' +
+    '<label class="field"><span>Částka celkem (kolik odchází z tvého účtu)</span><input name="amount" inputmode="decimal" placeholder="0" value="' + esc(d.amount) + '" oninput="App.subCalc()"></label>' +
+    '<label class="field"><span>Opakování</span><select name="period">' + perOpts + '</select></label>' +
+    '<label class="field"><span>Datum příští platby</span><input type="date" name="first" required value="' + esc(d.first) + '"></label>' +
+    (d.id ? '' : '<p class="hint">Od tohoto data se platby začnou sledovat. Zadej první platbu, která ještě není v zůstatku účtu.</p>') +
+    '<label class="field"><span>Z účtu</span><select name="acc">' + accOpts + '</select></label>' +
+    '<label class="field"><span>Kategorie</span><select name="cat">' + catOpts + '</select></label>' +
+    '<label class="toggle"><input type="checkbox" name="auto"' + (d.auto ? ' checked' : '') + '><span>Zapisovat platbu automaticky v den splatnosti</span></label>' +
+    '<h2 style="font-size:18px">Spoluplatitelé</h2><p class="hint" style="margin:0">Lidé, kteří ti posílají svůj podíl. Nech prázdné, pokud platíš sám.</p>' +
+    rows +
+    '<div class="btns2"><button type="button" class="btn ghost small" onclick="App.subAddMember()">+ Přidat člověka</button>' + (d.members.length ? '<button type="button" class="btn ghost small" onclick="App.subSplit()">Rozdělit rovným dílem</button>' : '') + '</div>' +
+    '<p class="muted" id="myshare" style="margin:12px 2px 0"></p>' +
+    (d.id ? '<label class="toggle"><input type="checkbox" name="active"' + (d.active ? ' checked' : '') + '><span>Platba stále běží (vypni, když předplatné zrušíš)</span></label>' : '') +
+    '<button class="btn" type="submit" style="margin-top:16px">' + (d.id ? 'Uložit změny' : 'Přidat platbu') + '</button>' +
+    (d.id ? '<button class="btn danger" type="button" onclick="App.delSub(\'' + d.id + '\')">Smazat</button>' : '') +
+    '</form>', function(){
+      subCalc();
+      if (focusLast) { var ins = document.querySelectorAll('#subf .mn'); if (ins.length) ins[ins.length-1].focus(); }
+      else if (!d.id) setTimeout(function(){ var i = document.querySelector('#subf [name=nm]'); if (i) i.focus(); }, 60);
+    });
+}
+function readSub(){
+  var f = document.getElementById('subf'); if (!f || !sd) return;
+  var e = f.elements;
+  sd.icon = e.icon.value.trim(); sd.name = e.nm.value; sd.amount = e.amount.value; sd.period = e.period.value;
+  sd.first = e.first.value; sd.acc = e.acc.value; sd.cat = e.cat.value; sd.auto = e.auto.checked;
+  if (e.active) sd.active = e.active.checked;
+  var rows = f.querySelectorAll('.mrow');
+  rows.forEach(function(r, i){ sd.members[i].name = r.querySelector('.mn').value; sd.members[i].share = r.querySelector('.share').value; });
+}
+function subCalc(){
+  var f = document.getElementById('subf'), out = document.getElementById('myshare'); if (!f || !out) return;
+  var a = parseAmt(f.elements.amount.value), sum = 0;
+  f.querySelectorAll('.mrow .share').forEach(function(i){ var v = parseAmt(i.value); if (isFinite(v)) sum += v; });
+  if (!isFinite(a)) { out.textContent = ''; return; }
+  var mine = a - sum;
+  out.innerHTML = f.querySelectorAll('.mrow').length ? 'Tvůj podíl: <b class="' + (mine < 0 ? 'neg' : '') + '">' + money(mine) + '</b>' : '';
+}
+function subAddMember(){ readSub(); sd.members.push({id:uid(), name:'', share:'', isNew:true}); subSheet(true); }
+function subDelMember(i){ readSub(); sd.members.splice(i, 1); subSheet(); }
+function subSplit(){
+  readSub();
+  var a = parseAmt(sd.amount);
+  if (!isFinite(a) || a <= 0) { toast('Nejdřív zadej částku.'); return; }
+  var share = Math.round(a / (sd.members.length + 1) * 100) / 100;
+  sd.members.forEach(function(m){ m.share = String(share).replace('.', ','); });
+  subSheet();
+}
+function saveSub(e){
+  e.preventDefault(); readSub();
+  var d = sd, amount = parseAmt(d.amount), name = d.name.trim();
+  if (!name) { toast('Zadej název.'); return; }
+  if (!isFinite(amount) || amount <= 0) { toast('Zadej částku.'); return; }
+  if (!d.first) { toast('Vyber datum.'); return; }
+  var old = d.id ? subById(d.id) : null;
+  var members = d.members.filter(function(m){ return m.name.trim(); }).map(function(m){
+    var sh = parseAmt(m.share); var o = {id:m.id, name:m.name.trim(), share:isFinite(sh) ? Math.abs(Math.round(sh*100)/100) : 0};
+    if (m.since) o.since = m.since;
+    return o;
+  });
+  var sum = members.reduce(function(sm,m){ return sm + m.share; }, 0);
+  if (sum > amount + 0.001) { toast('Podíly ostatních jsou vyšší než celá částka.'); return; }
+  var x = {id:d.id || uid(), name:name, icon:d.icon || '🔁', amount:Math.round(amount*100)/100, period:d.period, first:d.first, acc:d.acc, cat:d.cat,
+           auto:!!d.auto, members:members, created:old ? old.created : today(), handled:old ? (old.handled || []).slice() : [], end:null};
+  if (old) {
+    x.end = d.active ? null : (old.end || today());
+    // after editing, never backfill past payments automatically
+    dues(x, today()).forEach(function(du){ if (x.handled.indexOf(du) < 0) x.handled.push(du); });
+    var ld = lastDue(x);
+    d.members.forEach(function(m){ if (m.isNew) { var mm = x.members.filter(function(z){ return z.id === m.id; })[0]; if (mm) mm.since = ld; } });
+    S.subs = S.subs.map(function(z){ return z.id === x.id ? x : z; });
+  } else {
+    S.subs.push(x);
+  }
+  var n = processAuto();
+  save(); render(); subDetail(x.id);
+  toast(old ? 'Uloženo' : 'Platba přidána' + (n ? ', ' + zap(n,'platba','platby','plateb').toLowerCase() : ''));
+}
+function delSub(id){
+  if (!confirm('Smazat tuto pravidelnou platbu? Už zapsané pohyby zůstanou v Pohybech.')) return;
+  S.subs = S.subs.filter(function(z){ return z.id !== id; });
+  save(); closeSheet(); render(); toast('Smazáno');
+}
+function fab(){ if (ui.view === 'subs') subForm(); else addTx(); }
+
 /* ---------- UI actions ---------- */
 function month(kind, d){
   if (kind === 'tx') ui.txMonth = addMonths(ui.txMonth, d); else ui.statMonth = addMonths(ui.statMonth, d);
@@ -934,14 +1257,14 @@ function importFile(input){
       var d = JSON.parse(r.result);
       if (!d || !Array.isArray(d.accounts) || !Array.isArray(d.tx)) throw new Error('bad');
       var msg = 'Obnovit zálohu? Načte se ' + d.accounts.length + ' ' + pl(d.accounts.length,'účet','účty','účtů') + ' a ' + d.tx.length + ' ' + pl(d.tx.length,'pohyb','pohyby','pohybů') + '. Současná data se nahradí.';
-      if (confirm(msg)) { S = normalize(d); save(); ui.view = 'tx'; ui.reveal = false; render(); toast('Záloha obnovena'); }
+      if (confirm(msg)) { S = normalize(d); processAuto(); save(); ui.view = 'tx'; ui.reveal = false; render(); toast('Záloha obnovena'); }
     } catch(e) { toast('Tenhle soubor není záloha z aplikace Finance.'); }
     input.value = '';
   };
   r.readAsText(f);
 }
 function exportCSV(){
-  var TN = {expense:'Výdaj', income:'Příjem', transfer:'Převod', reval:'Změna hodnoty'};
+  var TN = {expense:'Výdaj', income:'Příjem', transfer:'Převod', reval:'Změna hodnoty', refund:'Vratka'};
   var q = function(s){ s = String(s == null ? '' : s); return /[;"\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s; };
   var rows = [['Datum','Typ','Částka','Účet','Na účet','Kategorie','Poznámka']];
   S.tx.slice().sort(sortTx).reverse().forEach(function(t){
@@ -1000,11 +1323,8 @@ function sampleData(){
     tx(D(10),'income',52000,bank,{cat:I('Mzda'), note:'Výplata'});
     if (m % 6 === 5) tx(D(10),'income',ri(15000,25000),bank,{cat:I('Bonus'), note:'Pololetní odměna'});
     tx(D(28),'income',r(250,420),sav,{cat:I('Úroky a dividendy'), note:'Úrok'});
-    tx(D(12),'expense',16500,bank,{cat:E('Bydlení'), note:'Nájem'});
     tx(D(15),'expense',2900,bank,{cat:E('Energie a služby'), note:'Elektřina a plyn'});
     tx(D(18),'expense',549,bank,{cat:E('Energie a služby'), note:'Internet'});
-    tx(D(5),'expense',199,bank,{cat:E('Předplatné'), note:'Hudba'});
-    tx(D(7),'expense',259,bank,{cat:E('Předplatné'), note:'Filmy a seriály'});
     tx(D(11),'transfer',6000,bank,{to:sav, note:'Spoření'});
     tx(D(11),'transfer',7000,bank,{to:etf, note:'Pravidelná investice'});
     tx(D(20),'transfer',5200,bank,{to:loan, note:'Splátka úvěru'});
@@ -1030,6 +1350,28 @@ function sampleData(){
     tx(D(dim),'reval',r(700,1100),pen,{note:'Vklad, státní příspěvek a zhodnocení'});
     tx(D(dim),'reval',-2300,car,{note:'Odhad poklesu hodnoty'});
   }
+  function SUB(name, icon, amount, period, first, members, catName){
+    var x = {id:uid(), name:name, icon:icon, amount:amount, period:period, first:first, acc:bank, cat:E(catName || 'Předplatné'), auto:true,
+             members:(members || []).map(function(m){ return {id:uid(), name:m[0], share:m[1]}; }), created:start, handled:[], end:null};
+    s.subs.push(x); return x;
+  }
+  var y0 = st.getFullYear(), m0 = st.getMonth();
+  SUB('Nájem','🏠',16500,'month',fmtD(new Date(y0,m0,12)),null,'Bydlení');
+  var music = SUB('Hudba – rodinný tarif','🎧',269,'month',fmtD(new Date(y0,m0,5)),[['Petr',90],['Jana',90]]);
+  var films = SUB('Filmy a seriály','🎬',329,'month',fmtD(new Date(y0,m0,7)),[['Petr',110]]);
+  SUB('Cloudové úložiště','☁️',1190,'year',fmtD(new Date(y0,m0+2,20)));
+  s.subs.forEach(function(x){
+    dues(x, t).forEach(function(due){
+      x.handled.push(due);
+      s.tx.push({id:uid(), date:due, type:'expense', amount:x.amount, acc:bank, cat:x.cat, note:x.name, sub:x.id, due:due});
+      x.members.forEach(function(mb){
+        var age = daysBetween(due, t);
+        if ((mb.name === 'Jana' && x === music && age < 70) || (mb.name === 'Petr' && x === films && age < 10)) return;
+        var pd = parseD(due); pd.setDate(pd.getDate() + ri(0,5)); pd = fmtD(pd); if (pd > t) pd = t;
+        s.tx.push({id:uid(), date:pd, type:'refund', amount:mb.share, acc:bank, cat:x.cat, note:mb.name + ' – podíl ' + x.name, sub:x.id, due:due, member:mb.id});
+      });
+    });
+  });
   tx(t,'expense',89,cash,{cat:E('Restaurace a kavárny'), note:'Kafe cestou'});
   tx(t,'expense',642,bank,{cat:E('Potraviny'), note:'Albert'});
   s.lastAcc = bank;
@@ -1042,7 +1384,9 @@ window.App = {tab:tab, addTx:addTx, editTx:editTx, setTxType:setTxType, pickCat:
   accForm:accForm, accTypeChange:accTypeChange, saveAcc:saveAcc, delAcc:delAcc, accDetail:accDetail, updateValue:updateValue, saveValue:saveValue,
   closeSheet:closeSheet, reveal:reveal, setHide:setHide, month:month, search:search, setFilter:setFilter, setRange:setRange, statGo:statGo,
   exportJSON:exportJSON, importClick:importClick, importFile:importFile, exportCSV:exportCSV, setCurrency:setCurrency,
-  addCat:addCat, delCat:delCat, loadSample:loadSample, wipe:wipe};
+  addCat:addCat, delCat:delCat, loadSample:loadSample, wipe:wipe,
+  fab:fab, subForm:subForm, subDetail:subDetail, myPay:myPay, memberPay:memberPay, owedSheet:owedSheet, owedPay:owedPay, owedPayAll:owedPayAll,
+  subCalc:subCalc, subAddMember:subAddMember, subDelMember:subDelMember, subSplit:subSplit, saveSub:saveSub, delSub:delSub};
 
 testStorage();
 S = load();
@@ -1056,7 +1400,15 @@ document.addEventListener('visibilitychange', function(){
   if (document.querySelector('#sheet [data-wealth]')) closeSheet();
   if (ui.view === 'assets') render();
 });
+var autoN = processAuto();
+if (autoN) save();
 render();
+if (autoN) toast(zap(autoN,'pravidelná platba','pravidelné platby','pravidelných plateb'));
+document.addEventListener('visibilitychange', function(){
+  if (document.hidden) return;
+  var n = processAuto();
+  if (n) { save(); render(); toast(zap(n,'pravidelná platba','pravidelné platby','pravidelných plateb')); }
+});
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
   window.addEventListener('load', function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); });
 }

@@ -1,5 +1,5 @@
-// Měšec – offline cache. Při změně aplikace zvyš číslo verze.
-const CACHE = 'mesec-v1';
+// Finance – offline cache. Při změně aplikace zvyš číslo verze.
+const CACHE = 'finance-v3';
 const ASSETS = ['./', './index.html', './manifest.webmanifest', './icon-180.png', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -26,6 +26,6 @@ self.addEventListener('fetch', e => {
       return res;
     }).catch(() => null);
     if (cached) { e.waitUntil(fresh); return cached; }
-    return (await fresh) || new Response('Měšec je offline a ještě není uložený v telefonu.', { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+    return (await fresh) || new Response('Aplikace je offline a ještě není uložený v telefonu.', { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
   }));
 });

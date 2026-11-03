@@ -7,12 +7,12 @@
 <meta name="theme-color" content="#0E1916" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Měšec">
+<meta name="apple-mobile-web-app-title" content="Finance">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>Měšec</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👛</text></svg>">
+<title>Finance</title>
+<link rel="icon" type="image/png" href="icon-192.png">
 <style>
 :root{
   --bg:#E7EDE9; --surface:#F7FAF8; --ink:#14302A; --muted:#5A6E66; --line:#C9D4CE; --rule:#DCE4DF;
@@ -58,6 +58,12 @@ h2{font-family:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Cha
 .hero .sub{font-size:15px;color:var(--muted)}
 .hero .delta{font-size:15px;font-weight:600}
 .hero.compact .big{font-size:clamp(30px,9vw,40px)}
+.hero-top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.reveal{appearance:none;display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:20px;padding:6px 12px 6px 10px;font-size:14px;font-weight:600;cursor:pointer}
+.reveal svg{width:18px;height:18px}
+.masked{letter-spacing:.08em;color:var(--muted)}
+.toggle{display:flex;gap:12px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px;font-size:15px;cursor:pointer}
+.toggle input{appearance:auto;-webkit-appearance:checkbox;width:22px;height:22px;margin:0;padding:0;flex:none;accent-color:var(--green)}
 
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:12px}
 .chart{margin-top:16px}
@@ -164,7 +170,7 @@ input[type=date]{min-height:48px}
 .fab{position:fixed;right:max(18px,calc(50% - 302px));bottom:calc(76px + env(safe-area-inset-bottom,0px));width:58px;height:58px;border-radius:50%;border:0;background:var(--ink);color:var(--on-ink);font-size:32px;line-height:1;box-shadow:0 6px 18px rgba(10,30,24,.28);z-index:6;cursor:pointer}
 .fab[hidden]{display:none}
 nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
-nav.tabs .in{max-width:640px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr)}
+nav.tabs .in{max-width:640px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr)}
 nav.tabs button{appearance:none;border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0 7px;font-size:11.5px;color:var(--muted);cursor:pointer}
 nav.tabs button svg{width:24px;height:24px}
 nav.tabs button.on{color:var(--ink);font-weight:600}
@@ -191,7 +197,7 @@ svg.i{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke
 <body>
 <div id="banner" hidden></div>
 <header class="top"><div class="in">
-  <h1 id="title" class="serif">Přehled</h1>
+  <h1 id="title" class="serif">Pohyby</h1>
   <button class="iconbtn" onclick="App.tab('settings')" aria-label="Nastavení a záloha">
     <svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v2.6M12 18.9v2.6M4.6 4.6l1.9 1.9M17.5 17.5l1.9 1.9M2.5 12h2.6M18.9 12h2.6M4.6 19.4l1.9-1.9M17.5 6.5l1.9-1.9"/></svg>
   </button>
@@ -202,10 +208,9 @@ svg.i{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke
 <button class="fab" id="fab" onclick="App.addTx()" aria-label="Přidat pohyb">+</button>
 
 <nav class="tabs"><div class="in">
-  <button data-v="overview" onclick="App.tab('overview')"><svg class="i" viewBox="0 0 24 24"><path d="M3 16.5l5-5 4 3 8-8"/><path d="M15 6.5h5v5"/><path d="M3 21h18"/></svg>Přehled</button>
   <button data-v="tx" onclick="App.tab('tx')"><svg class="i" viewBox="0 0 24 24"><path d="M9 6h12M9 12h12M9 18h12"/><path d="M3.5 6h.01M3.5 12h.01M3.5 18h.01" stroke-width="3"/></svg>Pohyby</button>
-  <button data-v="assets" onclick="App.tab('assets')"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="14" rx="2.5"/><path d="M3 10.5h18"/><path d="M15.5 15h2.5"/><path d="M6 6l9-3 1 3"/></svg>Majetek</button>
   <button data-v="stats" onclick="App.tab('stats')"><svg class="i" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9h-9z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15z"/></svg>Statistiky</button>
+  <button data-v="assets" onclick="App.tab('assets')"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="14" rx="2.5"/><path d="M3 10.5h18"/><path d="M15.5 15h2.5"/><path d="M6 6l9-3 1 3"/></svg>Majetek</button>
 </div></nav>
 
 <div id="sheetWrap" class="sheet-wrap" hidden>
@@ -225,14 +230,17 @@ var TYPES = {
   bank:{n:'Běžný účet',i:'🏦',g:'liquid'},
   cash:{n:'Hotovost',i:'💵',g:'liquid'},
   savings:{n:'Spořicí účet',i:'🐷',g:'liquid'},
-  invest:{n:'Investice',i:'📈',g:'invest'},
-  crypto:{n:'Kryptoměny',i:'🪙',g:'invest'},
+  invest:{n:'Investice (akcie, ETF, fondy)',i:'📈',g:'invest'},
   pension:{n:'Penzijní spoření',i:'🧓',g:'invest'},
+  crypto:{n:'Kryptoměny',i:'🪙',g:'crypto'},
+  receivable:{n:'Pohledávka (někdo mi dluží)',i:'🤝',g:'receivable'},
   property:{n:'Majetek (nemovitost, auto…)',i:'🏠',g:'property'},
   debt:{n:'Dluh nebo úvěr',i:'💳',g:'debt'}
 };
-var GROUPS = [['liquid','Účty a hotovost'],['invest','Investice'],['property','Majetek'],['debt','Závazky']];
-var GCOL = {liquid:'#3D6FA6',invest:'#2C8A5F',property:'#B98B2B'};
+var GROUPS = [['liquid','Účty a hotovost'],['invest','Investice'],['crypto','Kryptoměny'],['receivable','Pohledávky'],['property','Majetek'],['debt','Závazky']];
+var GCOL = {liquid:'#3D6FA6',invest:'#2C8A5F',crypto:'#C2603B',receivable:'#8B52A0',property:'#B98B2B'};
+var EYE = '<svg class="i" viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+var EYE_OFF = '<svg class="i" viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/><path d="M3 3l18 18"/></svg>';
 var PALETTE = ['#2C8A5F','#C2603B','#3D6FA6','#B98B2B','#8B52A0','#3A9E9B','#B8465F','#6E8237','#5B6B8C','#9E6C4E','#4E9070','#7A5CA0','#9AA0A0','#C98A6B'];
 var DEF_CATS = {
   expense:[['Potraviny','🛒'],['Restaurace a kavárny','☕'],['Bydlení','🏠'],['Energie a služby','⚡'],['Doprava','🚗'],['Zdraví','💊'],['Oblečení','👕'],['Zábava','🎬'],['Předplatné','📱'],['Domácnost','🧺'],['Dárky','🎁'],['Vzdělání','📚'],['Cestování','✈️'],['Ostatní','📦']],
@@ -240,7 +248,7 @@ var DEF_CATS = {
 };
 
 var S, storageOk = true, charts = {}, draft = null;
-var ui = {view:'overview', txMonth:null, statMonth:null, txFilter:'all', q:'', range:12};
+var ui = {reveal:false, view:'tx', txMonth:null, statMonth:null, txFilter:'all', q:'', range:12};
 
 /* ---------- helpers ---------- */
 function $(s){ return document.querySelector(s); }
@@ -295,7 +303,7 @@ function sortTx(a, b){ return a.date < b.date ? 1 : a.date > b.date ? -1 : (a.id
 /* ---------- storage ---------- */
 function defaultState(){
   return {
-    v:1, currency:'Kč', accounts:[], tx:[], lastBackup:null, lastAcc:null,
+    v:1, currency:'Kč', accounts:[], tx:[], lastBackup:null, lastAcc:null, hideWealth:true,
     cats:{
       expense: DEF_CATS.expense.map(function(c,i){ return {id:'e'+i, name:c[0], icon:c[1]}; }),
       income: DEF_CATS.income.map(function(c,i){ return {id:'i'+i, name:c[0], icon:c[1]}; })
@@ -334,7 +342,7 @@ function banner(){
   var b = $('#banner');
   if (storageOk) { b.hidden = true; return; }
   b.hidden = false;
-  b.textContent = 'Tento prohlížeč neumí ukládat data – po zavření zmizí. Otevři Měšec v jiném prohlížeči, nebo si před zavřením vždy ulož zálohu.';
+  b.textContent = 'Tento prohlížeč neumí ukládat data – po zavření zmizí. Otevři aplikaci v jiném prohlížeči, nebo si před zavřením vždy ulož zálohu.';
 }
 
 /* ---------- data logic ---------- */
@@ -533,13 +541,13 @@ function txRow(t, ctx){
 }
 function accRow(a, bal){
   var t = tinfo(a);
-  return '<button class="row" onclick="App.accDetail(\''+a.id+'\')"><span class="ico">'+t.i+'</span><div class="main"><div class="t">'+esc(a.name)+'</div><div class="s">'+esc(t.n)+'</div></div><div class="amt '+(bal < 0 ? 'neg' : '')+'">'+money(bal)+'</div></button>';
+  return '<button class="row" onclick="App.accDetail(\''+a.id+'\')"><span class="ico">'+t.i+'</span><div class="main"><div class="t">'+esc(a.name)+'</div><div class="s">'+esc(t.n)+'</div></div><div class="amt '+(bal < 0 && !hidden() ? 'neg' : '')+'">'+hm(bal)+'</div></button>';
 }
 function isIOS(){ return /iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1); }
 function isStandalone(){ return navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches); }
 function installHint(){
   if (!isIOS() || isStandalone()) return '';
-  return '<div class="notice" style="cursor:default;border-style:solid"><b>Přidej si Měšec na plochu.</b> Dole v Safari klepni na Sdílet a pak na Přidat na plochu. Spouštěj ho potom jen z plochy – funguje tak i bez internetu a data tam má oddělená od Safari.</div>';
+  return '<div class="notice" style="cursor:default;border-style:solid"><b>Přidej si Finance na plochu.</b> Dole v Safari klepni na Sdílet a pak na Přidat na plochu. Spouštěj aplikaci potom jen z plochy – funguje tak i bez internetu a data tam má oddělená od Safari.</div>';
 }
 function vEmpty(){
   return installHint() + '<div class="welcome"><div class="big serif">Začni tím, kde máš peníze</div>' +
@@ -549,51 +557,24 @@ function vEmpty(){
 }
 
 /* ---------- views ---------- */
-function vOverview(){
-  if (!S.accounts.length) return vEmpty();
-  var b = balances(), assets = 0, debts = 0, hint = installHint();
-  S.accounts.forEach(function(a){ if (a.type === 'debt') debts += b[a.id]; else assets += b[a.id]; });
-  var nw = assets + debts;
-  var delta = nw - netWorth(monthEnd(addMonths(curYM(), -1)));
-  var ym = curYM(), m = monthStats(ym);
-  var h = hint + '<section class="hero"'+(hint ? ' style="margin-top:16px"' : '')+'><div class="label">Čisté jmění</div>' +
-    '<div class="big serif num"><span class="dbl">'+money(nw)+'</span></div>' +
-    '<div class="delta '+(delta >= 0 ? 'pos' : 'neg')+'">'+money(delta, true)+' <span class="muted" style="font-weight:400">od začátku měsíce</span></div>' +
-    (debts ? '<div class="sub">Aktiva '+money(assets)+', závazky '+money(-debts)+'</div>' : '') + '</section>';
-
-  var ranges = [[3,'3 měsíce'],[12,'Rok'],[36,'3 roky'],[0,'Vše']];
-  h += '<section class="panel chart"><div class="seg sm" role="tablist">' + ranges.map(function(r){
-    return '<button class="'+(ui.range === r[0] ? 'on' : '')+'" onclick="App.setRange('+r[0]+')">'+r[1]+'</button>';
-  }).join('') + '</div>' + lineChart('nw', series(ui.range)) + '</section>';
-
-  if (S.tx.length >= 5) {
-    var since = S.lastBackup ? daysBetween(S.lastBackup, today()) : null;
-    if (since === null || since >= 14) {
-      h += '<button class="notice" onclick="App.exportJSON()">' + (since === null ? 'Zatím nemáš žádnou zálohu.' : 'Poslední záloha je ' + since + ' dní stará.') + ' <b>Uložit zálohu</b></button>';
-    }
-  }
-
-  h += '<h2>' + ymLabel(ym) + '</h2>' + strip(m);
-  if (Math.abs(m.reval) >= 0.5) h += '<p class="reval">Změna hodnoty investic a majetku: <b class="'+(m.reval >= 0 ? 'pos' : 'neg')+'">'+money(m.reval, true)+'</b></p>';
-
-  var top = Object.keys(m.byCat).map(function(k){ return [k, m.byCat[k]]; }).sort(function(a,b){ return b[1]-a[1]; }).slice(0,4);
-  if (top.length) {
-    h += '<div class="ghead"><h2>Kam jdou peníze</h2><button class="link" onclick="App.tab(\'stats\')">Statistiky</button></div><div class="list">' +
-      top.map(function(x){ var c = cat(x[0]);
-        return '<div class="row"><span class="ico">'+(c ? c.icon : '📦')+'</span><div class="main"><div class="t">'+esc(c ? c.name : 'Bez kategorie')+'</div><div class="bar"><i style="width:'+(x[1]/top[0][1]*100).toFixed(1)+'%"></i></div></div><div class="amt">'+money(x[1])+'</div></div>';
-      }).join('') + '</div>';
-  }
-  var recent = S.tx.slice().sort(sortTx).slice(0,5);
-  h += '<div class="ghead"><h2>Poslední pohyby</h2>' + (recent.length ? '<button class="link" onclick="App.tab(\'tx\')">Všechny</button>' : '') + '</div>';
-  h += recent.length ? '<div class="list">' + recent.map(function(t){ return txRow(t); }).join('') + '</div>'
-    : '<div class="empty">Zatím žádné pohyby. Přidej první nákup nebo výplatu tlačítkem +.</div>';
-  return h;
+function hidden(){ return S.hideWealth !== false && !ui.reveal; }
+function hm(n, sign){ return hidden() ? '<span class="masked">•••••</span>\u00a0' + esc(S.currency) : money(n, sign); }
+function revealBtn(accId){
+  if (S.hideWealth === false) return '';
+  var arg = accId ? '\'' + accId + '\'' : '';
+  return '<button class="reveal" onclick="App.reveal('+arg+')">' + (ui.reveal ? EYE_OFF + 'Skrýt' : EYE + 'Zobrazit') + '</button>';
 }
-
+function backupNotice(){
+  if (S.tx.length < 5) return '';
+  var since = S.lastBackup ? daysBetween(S.lastBackup, today()) : null;
+  if (since !== null && since < 14) return '';
+  return '<button class="notice" style="margin:4px 0 14px" onclick="App.exportJSON()">' + (since === null ? 'Zatím nemáš žádnou zálohu.' : 'Poslední záloha je ' + since + ' dní stará.') + ' <b>Uložit zálohu</b></button>';
+}
 function vTx(){
   if (!S.accounts.length) return vEmpty();
   var f = [['all','Vše'],['expense','Výdaje'],['income','Příjmy'],['transfer','Převody']];
-  return '<div class="search"><input type="search" placeholder="Hledat v poznámkách, kategoriích, účtech" value="'+esc(ui.q)+'" oninput="App.search(this.value)" aria-label="Hledat"></div>' +
+  return (installHint() ? '<div style="margin-bottom:14px">' + installHint() + '</div>' : '') + backupNotice() +
+    '<div class="search"><input type="search" placeholder="Hledat v poznámkách, kategoriích, účtech" value="'+esc(ui.q)+'" oninput="App.search(this.value)" aria-label="Hledat"></div>' +
     '<div class="seg sm">' + f.map(function(x){ return '<button class="'+(ui.txFilter === x[0] ? 'on' : '')+'" onclick="App.setFilter(\''+x[0]+'\')">'+x[1]+'</button>'; }).join('') + '</div>' +
     '<div id="txlist">' + txListHtml() + '</div>';
 }
@@ -625,29 +606,40 @@ function txListHtml(){
 
 function vAssets(){
   if (!S.accounts.length) return vEmpty();
-  var b = balances(), g = {liquid:0, invest:0, property:0, debt:0};
+  var b = balances(), g = {liquid:0, invest:0, crypto:0, receivable:0, property:0, debt:0};
   S.accounts.forEach(function(a){ g[tinfo(a).g] += b[a.id]; });
-  var assets = g.liquid + g.invest + g.property, nw = assets + g.debt;
-  var h = '<section class="hero compact"><div class="label">Čisté jmění</div><div class="big serif num"><span class="dbl">'+money(nw)+'</span></div>' +
-    '<div class="sub">Aktiva '+money(assets)+(g.debt ? ', závazky '+money(-g.debt) : '')+'</div>';
-  var pos = ['liquid','invest','property'].filter(function(k){ return g[k] > 0; });
-  var ptot = pos.reduce(function(s,k){ return s + g[k]; }, 0);
-  if (ptot > 0) {
-    h += '<div class="alloc">' + pos.map(function(k){ return '<i style="flex:'+g[k]+';background:'+GCOL[k]+'"></i>'; }).join('') + '</div>';
-    h += '<div class="legend">' + pos.map(function(k){ var lab = GROUPS.filter(function(x){ return x[0] === k; })[0][1]; return '<span><i style="background:'+GCOL[k]+'"></i>'+lab+' '+pct(g[k]/ptot)+'</span>'; }).join('') + '</div>';
+  var assets = g.liquid + g.invest + g.crypto + g.receivable + g.property, nw = assets + g.debt, hid = hidden();
+  var h = '<section class="hero"><div class="hero-top"><div class="label">Čisté jmění</div>' + revealBtn() + '</div>' +
+    '<div class="big serif num"><span class="dbl">' + hm(nw) + '</span></div>';
+  if (hid) {
+    h += '<div class="sub">Hodnoty jsou skryté. Zobrazíš je tlačítkem vpravo nahoře, po odchodu ze záložky se zase skryjí.</div></section>';
+  } else {
+    var delta = nw - netWorth(monthEnd(addMonths(curYM(), -1))), m = monthStats(curYM());
+    h += '<div class="delta ' + (delta >= 0 ? 'pos' : 'neg') + '">' + money(delta, true) + ' <span class="muted" style="font-weight:400">od začátku měsíce</span></div>';
+    h += '<div class="sub">Aktiva ' + money(assets) + (g.debt ? ', závazky ' + money(-g.debt) : '') + '</div>';
+    if (Math.abs(m.reval) >= 0.5) h += '<div class="sub">Změna hodnoty majetku tento měsíc: <b class="' + (m.reval >= 0 ? 'pos' : 'neg') + '">' + money(m.reval, true) + '</b></div>';
+    var pos = ['liquid','invest','crypto','receivable','property'].filter(function(k){ return g[k] > 0; });
+    var ptot = pos.reduce(function(sm,k){ return sm + g[k]; }, 0);
+    if (ptot > 0) {
+      h += '<div class="alloc">' + pos.map(function(k){ return '<i style="flex:' + g[k] + ';background:' + GCOL[k] + '"></i>'; }).join('') + '</div>';
+      h += '<div class="legend">' + pos.map(function(k){ var lab = GROUPS.filter(function(x){ return x[0] === k; })[0][1]; return '<span><i style="background:' + GCOL[k] + '"></i>' + lab + ' ' + pct(g[k]/ptot) + '</span>'; }).join('') + '</div>';
+    }
+    h += '</section>';
+    var ranges = [[3,'3 měsíce'],[12,'Rok'],[36,'3 roky'],[0,'Vše']];
+    h += '<section class="panel chart"><div class="seg sm">' + ranges.map(function(r){
+      return '<button class="' + (ui.range === r[0] ? 'on' : '') + '" onclick="App.setRange(' + r[0] + ')">' + r[1] + '</button>';
+    }).join('') + '</div>' + lineChart('nw', series(ui.range)) + '</section>';
   }
-  h += '</section>';
   GROUPS.forEach(function(gr){
     var list = S.accounts.filter(function(a){ return tinfo(a).g === gr[0]; });
     if (!list.length) return;
     list.sort(function(x,y){ return Math.abs(b[y.id]) - Math.abs(b[x.id]); });
-    h += '<div class="ghead"><h2>'+gr[1]+'</h2><span class="num">'+money(g[gr[0]])+'</span></div><div class="list">' +
+    h += '<div class="ghead"><h2>' + gr[1] + '</h2><span class="num">' + hm(g[gr[0]]) + '</span></div><div class="list">' +
       list.map(function(a){ return accRow(a, b[a.id]); }).join('') + '</div>';
   });
-  h += '<button class="btn ghost mt" onclick="App.accForm()">Přidat účet nebo majetek</button>';
+  h += '<button class="btn ghost mt" onclick="App.accForm()">Přidat účet, pohledávku nebo majetek</button>';
   return h;
 }
-
 function vStats(){
   if (!S.accounts.length) return vEmpty();
   var ym = ui.statMonth, m = monthStats(ym);
@@ -696,26 +688,29 @@ function vSettings(){
     '<div class="stack"><button class="btn" onclick="App.exportJSON()">Uložit zálohu</button>' +
     '<button class="btn ghost" onclick="App.importClick()">Obnovit ze zálohy</button>' +
     '<button class="btn ghost" onclick="App.exportCSV()">Exportovat pohyby do tabulky (CSV)</button></div>' +
+    '<h2>Soukromí</h2><label class="toggle"><input type="checkbox"'+(S.hideWealth !== false ? ' checked' : '')+' onchange="App.setHide(this.checked)"><span>Skrývat hodnotu majetku, dokud neklepnu na Zobrazit</span></label>' +
+    '<p class="muted small">Celkovou hodnotu majetku ukazuje jen záložka Majetek. Pohyby a Statistiky ji nezobrazují nikde.</p>' +
     '<h2>Měna</h2><label class="field"><span>Označení u částek</span><input value="'+esc(S.currency)+'" maxlength="5" onchange="App.setCurrency(this.value)"></label>' +
     catEditor('expense','Kategorie výdajů') + catEditor('income','Kategorie příjmů') +
     '<h2>Ostatní</h2><div class="stack"><button class="btn ghost" onclick="App.loadSample()">Načíst ukázková data</button>' +
     '<button class="btn danger" onclick="App.wipe()">Smazat všechna data</button></div>' +
-    '<p class="muted small center" style="margin-top:28px">Měšec běží celý v telefonu, funguje bez internetu a nic nikam neodesílá.</p>';
+    '<p class="muted small center" style="margin-top:28px">Aplikace běží celá v telefonu, funguje bez internetu a nic nikam neodesílá.</p>';
 }
 
 /* ---------- render ---------- */
-var TITLES = {overview:'Přehled', tx:'Pohyby', assets:'Majetek', stats:'Statistiky', settings:'Nastavení'};
+var TITLES = {tx:'Pohyby', assets:'Majetek', stats:'Statistiky', settings:'Nastavení'};
 function render(){
   charts = {};
   var v = ui.view;
   $('#title').textContent = TITLES[v];
   document.querySelectorAll('nav.tabs button').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-v') === v); });
   $('#fab').hidden = (v === 'settings' || !S.accounts.length);
-  var fn = {overview:vOverview, tx:vTx, assets:vAssets, stats:vStats, settings:vSettings}[v];
+  var fn = {tx:vTx, assets:vAssets, stats:vStats, settings:vSettings}[v];
   $('#view').innerHTML = fn();
   bindCharts($('#view'));
 }
-function tab(v){ ui.view = v; render(); window.scrollTo(0,0); }
+function tab(v){ if (v !== ui.view) ui.reveal = false; ui.view = v; render(); window.scrollTo(0,0); }
+function reveal(accId){ ui.reveal = !ui.reveal; render(); if (accId) accDetail(accId); }
 
 /* ---------- sheet ---------- */
 function openSheet(html, after){
@@ -807,7 +802,13 @@ function delTx(id){
 }
 
 /* ---------- accounts ---------- */
-function initLabel(type){ return type === 'debt' ? 'Kolik zbývá splatit' : (TYPES[type].g === 'liquid' ? 'Zůstatek' : 'Současná hodnota'); }
+function initLabel(type){ return type === 'debt' ? 'Kolik zbývá splatit' : type === 'receivable' ? 'Kolik ti dluží' : (TYPES[type].g === 'liquid' ? 'Zůstatek' : 'Současná hodnota'); }
+function typeHint(type){
+  if (type === 'receivable') return 'Když někomu půjčíš, zapiš to jako převod z účtu na tuto pohledávku. Když ti vrátí, zapiš převod opačně. Pohledávka se počítá do majetku.';
+  if (type === 'debt') return 'Splátku jistiny zapiš jako převod z účtu na tento úvěr, úroky a poplatky jako výdaj.';
+  if (type === 'crypto' || type === 'invest' || type === 'pension') return 'Nákup zapiš jako převod z účtu sem. Aktuální hodnotu pak občas přepiš tlačítkem Aktualizovat hodnotu.';
+  return '';
+}
 function accForm(id){
   var a = id ? acc(id) : null, type = a ? a.type : 'bank';
   var init = a ? (type === 'debt' ? -a.initial : a.initial) : '';
@@ -816,6 +817,7 @@ function accForm(id){
     '<label class="field"><span>Název</span><input name="nm" required value="'+esc(a ? a.name : '')+'" placeholder="třeba Běžný účet, Peněženka, ETF"></label>' +
     '<label class="field"><span>Druh</span><select name="type" onchange="App.accTypeChange(this.value)">' +
       Object.keys(TYPES).map(function(k){ return '<option value="'+k+'"'+(k === type ? ' selected' : '')+'>'+TYPES[k].i+' '+TYPES[k].n+'</option>'; }).join('') + '</select></label>' +
+    '<p class="hint" id="typeHint" style="margin-top:-6px">'+typeHint(type)+'</p>' +
     '<label class="field"><span id="initLabel">'+initLabel(type)+'</span><input name="initial" inputmode="decimal" placeholder="0" value="'+(init === '' ? '' : esc(String(init).replace('.', ',')))+'"></label>' +
     '<label class="field"><span>Ke dni</span><input type="date" name="start" required value="'+(a ? a.start : today())+'"></label>' +
     '<p class="hint">Zůstatek k tomuto dni už obsahuje všechno, co proběhlo dřív. Zapisuj jen pohyby od tohoto dne dál, jinak se započítají dvakrát.</p>' +
@@ -825,7 +827,7 @@ function accForm(id){
       if (!a) setTimeout(function(){ var i = document.querySelector('#accf [name=nm]'); if (i) i.focus(); }, 60);
     });
 }
-function accTypeChange(v){ var l = document.getElementById('initLabel'); if (l) l.textContent = initLabel(v); }
+function accTypeChange(v){ var l = document.getElementById('initLabel'); if (l) l.textContent = initLabel(v); var h = document.getElementById('typeHint'); if (h) h.textContent = typeHint(v); }
 function saveAcc(e, id){
   e.preventDefault();
   var f = e.target.elements, name = f.nm.value.trim(), type = f.type.value, init = parseAmt(f.initial.value);
@@ -847,15 +849,16 @@ function delAcc(id){
   if (S.lastAcc === id) S.lastAcc = null;
   save(); closeSheet(); render(); toast('Účet smazán');
 }
-function valueLabel(a){ var g = tinfo(a).g; return g === 'debt' ? 'Aktualizovat dluh' : g === 'liquid' ? 'Srovnat zůstatek' : 'Aktualizovat hodnotu'; }
+function valueLabel(a){ var g = tinfo(a).g; return g === 'debt' ? 'Aktualizovat dluh' : g === 'liquid' ? 'Srovnat zůstatek' : g === 'receivable' ? 'Upravit pohledávku' : 'Aktualizovat hodnotu'; }
 function accDetail(id){
   var a = acc(id); if (!a) return;
   var t = tinfo(a), bal = balances()[id];
   var items = S.tx.filter(function(x){ return x.acc === id || x.to === id; }).sort(sortTx);
   charts = {};
-  openSheet('<h3 class="serif">'+t.i+' '+esc(a.name)+'</h3><div class="muted small">'+esc(t.n)+'</div>' +
-    '<div class="big serif num mt-s '+(bal < 0 ? 'neg' : '')+'">'+money(bal)+'</div>' +
-    '<div class="panel chart">' + lineChart('acc_' + id, series(0, id)) + '</div>' +
+  var hid = hidden();
+  openSheet('<div data-wealth="1"></div><div class="hero-top"><h3 class="serif">'+t.i+' '+esc(a.name)+'</h3>' + revealBtn(id) + '</div><div class="muted small">'+esc(t.n)+'</div>' +
+    '<div class="big serif num mt-s '+(bal < 0 && !hid ? 'neg' : '')+'">'+hm(bal)+'</div>' +
+    (hid ? '' : '<div class="panel chart">' + lineChart('acc_' + id, series(0, id)) + '</div>') +
     '<div class="btnrow"><button class="btn" style="margin:0" onclick="App.updateValue(\''+id+'\')">'+valueLabel(a)+'</button><button class="btn ghost" style="margin:0" onclick="App.accForm(\''+id+'\')">Upravit účet</button></div>' +
     '<h2>Pohyby</h2>' + (items.length ? '<div class="list">' + items.slice(0,40).map(function(x){ return txRow(x, id); }).join('') + '</div>' +
       (items.length > 40 ? '<p class="muted small center">Zobrazeno posledních 40 z '+items.length+'.</p>' : '') : '<div class="empty">Na tomhle účtu zatím nejsou žádné pohyby.</div>'),
@@ -865,14 +868,16 @@ function updateValue(id){
   var a = acc(id); if (!a) return;
   var debt = a.type === 'debt', bal = balances()[id], g = tinfo(a).g;
   var cur = debt ? -bal : bal;
-  var expl = g === 'liquid' ? 'Zadej, kolik na účtu skutečně je. Rozdíl se zapíše jako srovnání zůstatku – hodí se, když jsi zapomněl něco zapsat.'
+  var hid = hidden();
+  var expl = g === 'receivable' ? 'Zadej, kolik ti dotyčný ještě dluží. Pokud část nevrátí, rozdíl se zapíše jako ztráta. Vrácené peníze zapisuj radši jako převod na účet.'
+           : g === 'liquid' ? 'Zadej, kolik na účtu skutečně je. Rozdíl se zapíše jako srovnání zůstatku – hodí se, když jsi zapomněl něco zapsat.'
            : debt ? 'Zadej, kolik aktuálně zbývá splatit (např. podle výpisu z banky). Rozdíl se započítá jako změna závazku.'
            : 'Zadej aktuální tržní hodnotu. Rozdíl oproti minulé hodnotě se zapíše jako zhodnocení nebo ztráta.';
   openSheet('<form id="valf" onsubmit="App.saveValue(event,\''+id+'\')" autocomplete="off">' +
-    '<h3 class="serif">'+valueLabel(a)+'</h3><p class="muted small">'+esc(a.name)+': teď '+money(cur)+'</p><p class="small">'+expl+'</p>' +
-    '<div class="amount-wrap"><input name="val" class="amount-input serif num" inputmode="decimal" value="'+esc(String(Math.round(cur*100)/100).replace('.', ','))+'" aria-label="Nová hodnota"><span class="cur">'+esc(S.currency)+'</span></div>' +
+    '<h3 class="serif">'+valueLabel(a)+'</h3><p class="muted small">'+esc(a.name)+(hid ? '' : ': teď '+money(cur))+'</p><p class="small">'+expl+'</p>' +
+    '<div class="amount-wrap"><input name="val" class="amount-input serif num" inputmode="decimal" placeholder="0" value="'+(hid ? '' : esc(String(Math.round(cur*100)/100).replace('.', ',')))+'" aria-label="Nová hodnota"><span class="cur">'+esc(S.currency)+'</span></div>' +
     '<label class="field"><span>Ke dni</span><input type="date" name="date" required value="'+today()+'"></label>' +
-    '<label class="field"><span>Poznámka</span><input name="note" value="'+(g === 'liquid' ? 'Srovnání zůstatku' : g === 'debt' ? 'Aktualizace dluhu' : 'Přecenění')+'"></label>' +
+    '<label class="field"><span>Poznámka</span><input name="note" value="'+(g === 'liquid' ? 'Srovnání zůstatku' : g === 'debt' ? 'Aktualizace dluhu' : g === 'receivable' ? 'Úprava pohledávky' : 'Přecenění')+'"></label>' +
     '<button class="btn" type="submit">Uložit novou hodnotu</button>' +
     '<button class="btn ghost" type="button" onclick="App.accDetail(\''+id+'\')">Zpět</button></form>',
     function(){ setTimeout(function(){ var i = document.querySelector('#valf [name=val]'); if (i) { i.focus(); i.select(); } }, 60); });
@@ -914,8 +919,8 @@ function download(name, text, mime){
   return Promise.resolve(true);
 }
 function exportJSON(){
-  var copy = Object.assign({}, S, {lastBackup:today(), exported:new Date().toISOString(), app:'Mesec'});
-  download('mesec-zaloha-' + today() + '.json', JSON.stringify(copy, null, 1), 'application/json').then(function(ok){
+  var copy = Object.assign({}, S, {lastBackup:today(), exported:new Date().toISOString(), app:'Finance'});
+  download('finance-zaloha-' + today() + '.json', JSON.stringify(copy, null, 1), 'application/json').then(function(ok){
     if (!ok) return;
     S.lastBackup = today(); save(); render(); toast('Záloha uložena');
   });
@@ -929,8 +934,8 @@ function importFile(input){
       var d = JSON.parse(r.result);
       if (!d || !Array.isArray(d.accounts) || !Array.isArray(d.tx)) throw new Error('bad');
       var msg = 'Obnovit zálohu? Načte se ' + d.accounts.length + ' ' + pl(d.accounts.length,'účet','účty','účtů') + ' a ' + d.tx.length + ' ' + pl(d.tx.length,'pohyb','pohyby','pohybů') + '. Současná data se nahradí.';
-      if (confirm(msg)) { S = normalize(d); save(); ui.view = 'overview'; render(); toast('Záloha obnovena'); }
-    } catch(e) { toast('Tenhle soubor není záloha z Měšce.'); }
+      if (confirm(msg)) { S = normalize(d); save(); ui.view = 'tx'; ui.reveal = false; render(); toast('Záloha obnovena'); }
+    } catch(e) { toast('Tenhle soubor není záloha z aplikace Finance.'); }
     input.value = '';
   };
   r.readAsText(f);
@@ -944,8 +949,9 @@ function exportCSV(){
     var sign = t.type === 'expense' ? -t.amount : t.amount;
     rows.push([t.date, TN[t.type] || t.type, String(sign).replace('.', ','), a ? a.name : '', b ? b.name : '', c ? c.name : '', t.note || '']);
   });
-  download('mesec-pohyby-' + today() + '.csv', '\ufeff' + rows.map(function(r){ return r.map(q).join(';'); }).join('\r\n'), 'text/csv');
+  download('finance-pohyby-' + today() + '.csv', '\ufeff' + rows.map(function(r){ return r.map(q).join(';'); }).join('\r\n'), 'text/csv');
 }
+function setHide(v){ S.hideWealth = !!v; ui.reveal = false; save(); toast(v ? 'Hodnota majetku bude skrytá' : 'Hodnota majetku bude vidět'); }
 function setCurrency(v){ S.currency = v.trim() || 'Kč'; save(); toast('Měna změněna'); }
 function addCat(kind){
   var n = document.getElementById('cn-' + kind), i = document.getElementById('ci-' + kind);
@@ -962,11 +968,11 @@ function delCat(kind, id){
 }
 function wipe(){
   if (!confirm('Opravdu smazat všechny účty, pohyby a kategorie? Tohle nejde vrátit. Pokud si nejsi jistý, ulož si nejdřív zálohu.')) return;
-  S = defaultState(); save(); ui.view = 'overview'; render(); toast('Data smazána');
+  S = defaultState(); save(); ui.view = 'tx'; render(); toast('Data smazána');
 }
 function loadSample(){
   if ((S.accounts.length || S.tx.length) && !confirm('Ukázková data nahradí všechno, co v aplikaci teď máš. Pokračovat?')) return;
-  S = sampleData(); save(); ui.view = 'overview'; ui.txMonth = curYM(); ui.statMonth = curYM(); render(); window.scrollTo(0,0);
+  S = sampleData(); save(); ui.view = 'tx'; ui.txMonth = curYM(); ui.statMonth = curYM(); render(); window.scrollTo(0,0);
   toast('Ukázková data načtena. Smažeš je v Nastavení.');
 }
 function sampleData(){
@@ -975,7 +981,8 @@ function sampleData(){
   function A(name, type, initial){ var a = {id:uid(), name:name, type:type, initial:initial, start:start}; s.accounts.push(a); return a.id; }
   var bank = A('Běžný účet','bank',38000), cash = A('Peněženka','cash',2500), sav = A('Spořicí účet','savings',90000),
       etf = A('ETF portfolio','invest',210000), btc = A('Bitcoin','crypto',25000), pen = A('Penzijní spoření','pension',64000),
-      car = A('Auto','property',280000), loan = A('Úvěr na auto','debt',-190000);
+      car = A('Auto','property',280000), loan = A('Úvěr na auto','debt',-190000),
+      eth = A('Ethereum','crypto',8000), rec = A('Půjčka Tomášovi','receivable',0);
   function E(n){ return s.cats.expense.filter(function(c){ return c.name === n; })[0].id; }
   function I(n){ return s.cats.income.filter(function(c){ return c.name === n; })[0].id; }
   function r(a, b){ return a + Math.random()*(b-a); }
@@ -1017,6 +1024,9 @@ function sampleData(){
     etfV += 7000;
     var ch = etfV * r(-0.035, 0.05); tx(D(dim),'reval',ch,etf,{note:'Přecenění'}); if (D(dim) <= t) etfV += ch;
     var cb = btcV * r(-0.14, 0.18); tx(D(dim),'reval',cb,btc,{note:'Přecenění'}); if (D(dim) <= t) btcV += cb;
+    if (m === 8) tx(D(14),'transfer',25000,bank,{to:rec, note:'Půjčil jsem Tomášovi na opravu auta'});
+    if (m >= 10 && m <= 12) tx(D(16),'transfer',3000,rec,{to:bank, note:'Tomáš vrátil splátku'});
+    tx(D(dim),'reval',r(-900,1200),eth,{note:'Přecenění'});
     tx(D(dim),'reval',r(700,1100),pen,{note:'Vklad, státní příspěvek a zhodnocení'});
     tx(D(dim),'reval',-2300,car,{note:'Odhad poklesu hodnoty'});
   }
@@ -1030,7 +1040,7 @@ function sampleData(){
 /* ---------- init ---------- */
 window.App = {tab:tab, addTx:addTx, editTx:editTx, setTxType:setTxType, pickCat:pickCat, saveTx:saveTx, delTx:delTx,
   accForm:accForm, accTypeChange:accTypeChange, saveAcc:saveAcc, delAcc:delAcc, accDetail:accDetail, updateValue:updateValue, saveValue:saveValue,
-  closeSheet:closeSheet, month:month, search:search, setFilter:setFilter, setRange:setRange, statGo:statGo,
+  closeSheet:closeSheet, reveal:reveal, setHide:setHide, month:month, search:search, setFilter:setFilter, setRange:setRange, statGo:statGo,
   exportJSON:exportJSON, importClick:importClick, importFile:importFile, exportCSV:exportCSV, setCurrency:setCurrency,
   addCat:addCat, delCat:delCat, loadSample:loadSample, wipe:wipe};
 
@@ -1040,6 +1050,12 @@ ui.txMonth = curYM(); ui.statMonth = curYM();
 banner();
 try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(function(){}); } catch(e) {}
 document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeSheet(); });
+document.addEventListener('visibilitychange', function(){
+  if (!document.hidden || !ui.reveal) return;
+  ui.reveal = false;
+  if (document.querySelector('#sheet [data-wealth]')) closeSheet();
+  if (ui.view === 'assets') render();
+});
 render();
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
   window.addEventListener('load', function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); });

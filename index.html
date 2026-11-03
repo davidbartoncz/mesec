@@ -1,0 +1,1050 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#E7EDE9" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0E1916" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Měšec">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>Měšec</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👛</text></svg>">
+<style>
+:root{
+  --bg:#E7EDE9; --surface:#F7FAF8; --ink:#14302A; --muted:#5A6E66; --line:#C9D4CE; --rule:#DCE4DF;
+  --green:#18774F; --red:#B03A2E; --chip:#DFE7E2; --on-ink:#F7FAF8;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#0E1916; --surface:#15231F; --ink:#E2ECE6; --muted:#8CA197; --line:#2A3C35; --rule:#203029;
+    --green:#5CC492; --red:#EE7D6F; --chip:#1D2E28; --on-ink:#0E1916;
+    color-scheme:dark;
+  }
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;-webkit-tap-highlight-color:transparent}
+body.locked{overflow:hidden}
+.serif{font-family:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Charter,Georgia,serif}
+.num{font-variant-numeric:tabular-nums}
+.pos{color:var(--green)} .neg{color:var(--red)} .mute{color:var(--muted)}
+.muted{color:var(--muted)} .small{font-size:13px} .center{text-align:center}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+
+header.top{position:sticky;top:0;z-index:5;background:var(--bg);padding-top:env(safe-area-inset-top,0px)}
+header.top .in{max-width:640px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:14px 20px 8px}
+header.top h1{margin:0;font-size:28px;font-weight:600;letter-spacing:-.01em}
+.iconbtn{appearance:none;border:0;background:transparent;width:42px;height:42px;border-radius:50%;display:grid;place-items:center;color:var(--muted)}
+.iconbtn svg{width:24px;height:24px}
+
+#banner{background:var(--red);color:#fff;font-size:14px;padding:10px 20px;text-align:center}
+main{max-width:640px;margin:0 auto;padding:0 20px calc(120px + env(safe-area-inset-bottom,0px))}
+
+h2{font-family:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Charter,Georgia,serif;font-size:20px;font-weight:600;margin:30px 0 10px}
+.ghead{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.ghead span{color:var(--muted);font-size:15px}
+.link{appearance:none;border:0;background:none;color:var(--green);font-size:15px;font-weight:600;padding:4px 0}
+
+.hero{padding:4px 0 6px}
+.hero .label{color:var(--muted);font-size:15px}
+.hero .big{font-size:clamp(34px,10.5vw,48px);line-height:1.15;font-weight:600;letter-spacing:-.015em;margin:2px 0 6px}
+.dbl{display:inline-block;border-bottom:4px double currentColor;padding-bottom:2px}
+.hero .sub{font-size:15px;color:var(--muted)}
+.hero .delta{font-size:15px;font-weight:600}
+.hero.compact .big{font-size:clamp(30px,9vw,40px)}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:12px}
+.chart{margin-top:16px}
+.chart .seg{margin-bottom:6px}
+.readout{display:flex;justify-content:space-between;align-items:baseline;padding:2px 4px 4px;font-size:14px;color:var(--muted)}
+.readout b{color:var(--ink);font-size:16px}
+svg.lc{display:block;width:100%;height:auto;color:var(--ink);touch-action:pan-y;user-select:none;-webkit-user-select:none}
+.gl{stroke:var(--rule);stroke-width:1}
+.zl{stroke:var(--muted);stroke-width:1;stroke-dasharray:3 3}
+.gt{fill:var(--muted);font-size:10.5px;font-family:inherit}
+.ln{stroke:currentColor;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.guide{stroke:var(--muted);stroke-width:1}
+.mk{fill:var(--surface);stroke:currentColor;stroke-width:2}
+.chart-empty{padding:34px 12px;text-align:center;color:var(--muted);font-size:14px}
+.bi{fill:var(--green)} .be{fill:var(--red)}
+.hit{fill:transparent;cursor:pointer}
+
+.seg{display:flex;background:var(--chip);border-radius:12px;padding:3px;gap:2px}
+.seg button{flex:1;appearance:none;border:0;background:transparent;padding:9px 6px;border-radius:9px;font-size:14px;font-weight:600;color:var(--muted)}
+.seg button.on{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.seg.sm button{padding:6px 4px;font-size:13px}
+
+.strip{display:grid;grid-template-columns:repeat(3,1fr);background:var(--surface);border:1px solid var(--line);border-radius:18px;overflow:hidden}
+.strip>div{padding:11px 12px;border-left:1px solid var(--rule);min-width:0}
+.strip>div:first-child{border-left:0}
+.strip .k{font-size:13px;color:var(--muted)}
+.strip .v{font-weight:650;font-size:15px;white-space:nowrap}
+.reval{font-size:14px;color:var(--muted);margin:8px 2px 0}
+
+.list{background:var(--surface);border:1px solid var(--line);border-radius:18px;overflow:hidden}
+.row{display:flex;align-items:center;gap:12px;padding:11px 14px;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--rule)}
+.list>.row:first-child{border-top:0}
+button.row{cursor:pointer}
+button.row:active{background:var(--chip)}
+.ico{width:38px;height:38px;border-radius:11px;background:var(--chip);display:grid;place-items:center;font-size:19px;flex:none}
+.row .main{flex:1;min-width:0}
+.row .t{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .s{font-size:13px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.amt{font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap}
+.amt-col{text-align:right}
+.amt-col .s{font-size:13px;color:var(--muted)}
+.bar{height:5px;border-radius:3px;background:var(--chip);margin-top:6px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--ink);border-radius:3px}
+.dot{width:12px;height:12px;border-radius:50%;flex:none}
+.dayhead{display:flex;justify-content:space-between;font-size:14px;color:var(--muted);margin:20px 4px 7px;font-weight:600}
+
+.mnav{display:flex;align-items:center;justify-content:space-between;margin:6px 0 12px}
+.mnav b{font-size:18px;font-weight:600}
+.mnav button{appearance:none;border:1px solid var(--line);background:var(--surface);width:42px;height:38px;border-radius:12px;font-size:20px;line-height:1}
+.search input{margin-bottom:10px}
+.mt{margin-top:18px} .mt-s{margin-top:6px}
+
+.alloc{display:flex;height:12px;border-radius:6px;overflow:hidden;gap:2px;margin:14px 0 8px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:9px;height:9px;border-radius:50%;display:inline-block}
+
+.donut-wrap{display:flex;justify-content:center;padding:16px;margin-bottom:12px}
+.donut{width:190px;height:190px}
+.dl{fill:var(--muted);font-size:10px}
+.dv{fill:var(--ink);font-size:17px;font-weight:600}
+.avg{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
+.avg div{font-size:13px;color:var(--muted)}
+.avg b{display:block;font-size:16px;color:var(--ink);font-variant-numeric:tabular-nums}
+
+.btn{appearance:none;border:0;border-radius:13px;padding:14px 16px;font-weight:650;font-size:16px;background:var(--ink);color:var(--on-ink);width:100%;cursor:pointer}
+.btn.ghost{background:var(--chip);color:var(--ink)}
+.btn.danger{background:transparent;color:var(--red);border:1px solid var(--line)}
+.btn.small{width:auto;padding:11px 14px;font-size:15px}
+.stack{display:grid;gap:10px}
+.btnrow{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.note{font-size:15px;margin:0 0 8px}
+.hint{font-size:13px;color:var(--muted);margin:-6px 0 16px}
+.notice{appearance:none;width:100%;text-align:left;border:1px dashed var(--line);background:transparent;border-radius:14px;padding:11px 14px;font-size:14px;color:var(--muted);margin-top:16px;cursor:pointer}
+.notice b{color:var(--green)}
+
+.field{display:block;margin:14px 0}
+.field>span{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+input,select{width:100%;font:inherit;font-size:16px;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--ink);appearance:none;-webkit-appearance:none}
+select{background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 18px) 52%,calc(100% - 13px) 52%;background-size:5px 5px;background-repeat:no-repeat;padding-right:34px}
+input[type=date]{min-height:48px}
+.amount-wrap{display:flex;align-items:baseline;justify-content:center;gap:8px;margin:18px 0 16px;border-bottom:2px solid var(--line)}
+.amount-input{font-size:40px;font-weight:600;text-align:right;border:0;background:transparent;padding:4px 0;width:100%;max-width:260px;border-radius:0}
+.amount-input:focus{outline:none}
+.amount-wrap:focus-within{border-color:var(--ink)}
+.cur{font-size:22px;color:var(--muted)}
+
+.chips{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+.chip{appearance:none;border:1.5px solid transparent;background:var(--chip);border-radius:12px;padding:8px 3px 7px;font-size:11.5px;line-height:1.2;text-align:center;cursor:pointer;min-height:62px}
+.chip .e{display:block;font-size:21px;margin-bottom:3px}
+.chip.on{border-color:var(--ink);background:var(--surface)}
+
+.tags{display:flex;flex-wrap:wrap;gap:7px}
+.tag{display:inline-flex;align-items:center;gap:4px;background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:5px 4px 5px 11px;font-size:14px}
+.tag button{appearance:none;border:0;background:transparent;color:var(--muted);width:26px;height:26px;border-radius:50%;font-size:17px;line-height:1;cursor:pointer}
+.addcat{display:flex;gap:8px;margin-top:10px}
+.addcat .emo{width:58px;flex:none;text-align:center}
+
+.welcome{padding:30px 0}
+.welcome .big{font-size:32px;line-height:1.2;font-weight:600;margin-bottom:12px}
+.welcome p{color:var(--muted);margin:0 0 22px;max-width:34em}
+.empty{text-align:center;color:var(--muted);padding:30px 16px;font-size:15px}
+
+.fab{position:fixed;right:max(18px,calc(50% - 302px));bottom:calc(76px + env(safe-area-inset-bottom,0px));width:58px;height:58px;border-radius:50%;border:0;background:var(--ink);color:var(--on-ink);font-size:32px;line-height:1;box-shadow:0 6px 18px rgba(10,30,24,.28);z-index:6;cursor:pointer}
+.fab[hidden]{display:none}
+nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
+nav.tabs .in{max-width:640px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr)}
+nav.tabs button{appearance:none;border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0 7px;font-size:11.5px;color:var(--muted);cursor:pointer}
+nav.tabs button svg{width:24px;height:24px}
+nav.tabs button.on{color:var(--ink);font-weight:600}
+svg.i{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+.sheet-wrap{position:fixed;inset:0;z-index:20}
+.sheet-wrap[hidden]{display:none}
+.backdrop{position:absolute;inset:0;background:rgba(6,18,14,.48)}
+.sheet{position:absolute;left:0;right:0;bottom:0;margin:0 auto;max-width:640px;max-height:92vh;max-height:92dvh;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;background:var(--surface);border-radius:22px 22px 0 0;padding:6px 20px calc(22px + env(safe-area-inset-bottom,0px));animation:up .22s ease-out}
+.sheet .grab{width:40px;height:5px;border-radius:3px;background:var(--line);margin:4px auto 6px}
+.sheet h3{font-size:23px;font-weight:600;margin:8px 0 4px}
+.sheet .btn{margin-top:10px}
+.sheet .big{font-size:34px;font-weight:600}
+.sheet .panel{background:var(--bg)}
+.sheet .list{background:var(--bg)}
+.sheet .chip.on{background:var(--bg)}
+@keyframes up{from{transform:translateY(40px);opacity:.5}}
+
+#toast{position:fixed;left:50%;bottom:calc(150px + env(safe-area-inset-bottom,0px));transform:translate(-50%,10px);background:var(--ink);color:var(--on-ink);padding:10px 16px;border-radius:22px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:30;max-width:88vw;text-align:center}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+@media (prefers-reduced-motion: reduce){.sheet{animation:none}#toast{transition:none}}
+</style>
+</head>
+<body>
+<div id="banner" hidden></div>
+<header class="top"><div class="in">
+  <h1 id="title" class="serif">Přehled</h1>
+  <button class="iconbtn" onclick="App.tab('settings')" aria-label="Nastavení a záloha">
+    <svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v2.6M12 18.9v2.6M4.6 4.6l1.9 1.9M17.5 17.5l1.9 1.9M2.5 12h2.6M18.9 12h2.6M4.6 19.4l1.9-1.9M17.5 6.5l1.9-1.9"/></svg>
+  </button>
+</div></header>
+
+<main id="view"></main>
+
+<button class="fab" id="fab" onclick="App.addTx()" aria-label="Přidat pohyb">+</button>
+
+<nav class="tabs"><div class="in">
+  <button data-v="overview" onclick="App.tab('overview')"><svg class="i" viewBox="0 0 24 24"><path d="M3 16.5l5-5 4 3 8-8"/><path d="M15 6.5h5v5"/><path d="M3 21h18"/></svg>Přehled</button>
+  <button data-v="tx" onclick="App.tab('tx')"><svg class="i" viewBox="0 0 24 24"><path d="M9 6h12M9 12h12M9 18h12"/><path d="M3.5 6h.01M3.5 12h.01M3.5 18h.01" stroke-width="3"/></svg>Pohyby</button>
+  <button data-v="assets" onclick="App.tab('assets')"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="14" rx="2.5"/><path d="M3 10.5h18"/><path d="M15.5 15h2.5"/><path d="M6 6l9-3 1 3"/></svg>Majetek</button>
+  <button data-v="stats" onclick="App.tab('stats')"><svg class="i" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9h-9z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15z"/></svg>Statistiky</button>
+</div></nav>
+
+<div id="sheetWrap" class="sheet-wrap" hidden>
+  <div class="backdrop" onclick="App.closeSheet()"></div>
+  <div class="sheet" role="dialog" aria-modal="true"><div class="grab"></div><div id="sheet"></div></div>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+<input type="file" id="importFile" accept=".json,application/json,text/plain" hidden onchange="App.importFile(this)">
+
+<script>
+(function(){
+'use strict';
+var KEY = 'mesec.v1';
+var MONTHS = ['leden','únor','březen','duben','květen','červen','červenec','srpen','září','říjen','listopad','prosinec'];
+var MS = ['led','úno','bře','dub','kvě','čvn','čvc','srp','zář','říj','lis','pro'];
+var TYPES = {
+  bank:{n:'Běžný účet',i:'🏦',g:'liquid'},
+  cash:{n:'Hotovost',i:'💵',g:'liquid'},
+  savings:{n:'Spořicí účet',i:'🐷',g:'liquid'},
+  invest:{n:'Investice',i:'📈',g:'invest'},
+  crypto:{n:'Kryptoměny',i:'🪙',g:'invest'},
+  pension:{n:'Penzijní spoření',i:'🧓',g:'invest'},
+  property:{n:'Majetek (nemovitost, auto…)',i:'🏠',g:'property'},
+  debt:{n:'Dluh nebo úvěr',i:'💳',g:'debt'}
+};
+var GROUPS = [['liquid','Účty a hotovost'],['invest','Investice'],['property','Majetek'],['debt','Závazky']];
+var GCOL = {liquid:'#3D6FA6',invest:'#2C8A5F',property:'#B98B2B'};
+var PALETTE = ['#2C8A5F','#C2603B','#3D6FA6','#B98B2B','#8B52A0','#3A9E9B','#B8465F','#6E8237','#5B6B8C','#9E6C4E','#4E9070','#7A5CA0','#9AA0A0','#C98A6B'];
+var DEF_CATS = {
+  expense:[['Potraviny','🛒'],['Restaurace a kavárny','☕'],['Bydlení','🏠'],['Energie a služby','⚡'],['Doprava','🚗'],['Zdraví','💊'],['Oblečení','👕'],['Zábava','🎬'],['Předplatné','📱'],['Domácnost','🧺'],['Dárky','🎁'],['Vzdělání','📚'],['Cestování','✈️'],['Ostatní','📦']],
+  income:[['Mzda','💼'],['Bonus','⭐'],['Prodej','🏷️'],['Úroky a dividendy','📈'],['Dary','🎁'],['Ostatní příjmy','💰']]
+};
+
+var S, storageOk = true, charts = {}, draft = null;
+var ui = {view:'overview', txMonth:null, statMonth:null, txFilter:'all', q:'', range:12};
+
+/* ---------- helpers ---------- */
+function $(s){ return document.querySelector(s); }
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function pad(n){ return String(n).padStart(2,'0'); }
+function fmtD(d){ return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()); }
+function today(){ return fmtD(new Date()); }
+function parseD(s){ var p = s.split('-').map(Number); return new Date(p[0], p[1]-1, p[2]); }
+function curYM(){ return today().slice(0,7); }
+function addMonths(ym, n){ var p = ym.split('-').map(Number); var d = new Date(p[0], p[1]-1+n, 1); return d.getFullYear() + '-' + pad(d.getMonth()+1); }
+function ymLabel(ym){ var p = ym.split('-').map(Number); var s = MONTHS[p[1]-1]; return s[0].toUpperCase() + s.slice(1) + ' ' + p[0]; }
+function monthEnd(ym){ var p = ym.split('-').map(Number); return fmtD(new Date(p[0], p[1], 0)); }
+function dShort(s){ var d = parseD(s); return d.getDate() + '. ' + (d.getMonth()+1) + '. ' + d.getFullYear(); }
+function dayLabel(s){
+  if (s === today()) return 'Dnes';
+  var y = new Date(); y.setDate(y.getDate()-1);
+  if (s === fmtD(y)) return 'Včera';
+  var d = parseD(s), wd = d.toLocaleDateString('cs-CZ', {weekday:'long'});
+  return wd[0].toUpperCase() + wd.slice(1) + ' ' + d.getDate() + '. ' + (d.getMonth()+1) + '.' + (d.getFullYear() !== new Date().getFullYear() ? ' ' + d.getFullYear() : '');
+}
+function daysBetween(a, b){ return Math.round((parseD(b) - parseD(a)) / 864e5); }
+function pl(n, a, b, c){ return n === 1 ? a : (n >= 2 && n <= 4 ? b : c); }
+
+var NF = new Intl.NumberFormat('cs-CZ', {maximumFractionDigits:2});
+var NFC;
+try { NFC = new Intl.NumberFormat('cs-CZ', {notation:'compact', maximumFractionDigits:1}); } catch(e) { NFC = null; }
+function money(n, sign){
+  var r = Math.round(n*100)/100, p = '';
+  if (r < 0) p = '−'; else if (sign && r > 0) p = '+';
+  return p + NF.format(Math.abs(r)) + '\u00a0' + esc(S.currency);
+}
+function compact(n){
+  if (NFC) return NFC.format(n);
+  var a = Math.abs(n);
+  if (a >= 1e6) return (n/1e6).toFixed(1).replace('.', ',') + ' mil.';
+  if (a >= 1e3) return Math.round(n/1e3) + ' tis.';
+  return String(Math.round(n));
+}
+function pct(x){ return (x*100).toFixed(0) + '\u00a0%'; }
+function parseAmt(s){
+  if (typeof s === 'number') return s;
+  var v = parseFloat(String(s || '').replace(/[\s\u00a0]/g,'').replace(',', '.').replace('−','-'));
+  return isFinite(v) ? v : NaN;
+}
+function toast(msg){
+  var t = $('#toast'); t.textContent = msg; t.classList.add('on');
+  clearTimeout(toast._t); toast._t = setTimeout(function(){ t.classList.remove('on'); }, 2600);
+}
+function sortTx(a, b){ return a.date < b.date ? 1 : a.date > b.date ? -1 : (a.id < b.id ? 1 : -1); }
+
+/* ---------- storage ---------- */
+function defaultState(){
+  return {
+    v:1, currency:'Kč', accounts:[], tx:[], lastBackup:null, lastAcc:null,
+    cats:{
+      expense: DEF_CATS.expense.map(function(c,i){ return {id:'e'+i, name:c[0], icon:c[1]}; }),
+      income: DEF_CATS.income.map(function(c,i){ return {id:'i'+i, name:c[0], icon:c[1]}; })
+    }
+  };
+}
+function normalize(s){
+  var d = defaultState();
+  if (!s || typeof s !== 'object') return d;
+  var out = Object.assign({}, d, s);
+  out.cats = {
+    expense: s.cats && Array.isArray(s.cats.expense) ? s.cats.expense : d.cats.expense,
+    income: s.cats && Array.isArray(s.cats.income) ? s.cats.income : d.cats.income
+  };
+  out.accounts = Array.isArray(s.accounts) ? s.accounts : [];
+  out.tx = Array.isArray(s.tx) ? s.tx : [];
+  if (!out.currency) out.currency = 'Kč';
+  return out;
+}
+function load(){
+  var raw = null, s = null;
+  try { raw = localStorage.getItem(KEY); } catch(e) { storageOk = false; }
+  if (raw) { try { s = JSON.parse(raw); } catch(e) {} }
+  return normalize(s);
+}
+function save(){
+  try { localStorage.setItem(KEY, JSON.stringify(S)); storageOk = true; }
+  catch(e) { storageOk = false; }
+  banner();
+}
+function testStorage(){
+  try { localStorage.setItem(KEY+'.t','1'); localStorage.removeItem(KEY+'.t'); }
+  catch(e) { storageOk = false; }
+}
+function banner(){
+  var b = $('#banner');
+  if (storageOk) { b.hidden = true; return; }
+  b.hidden = false;
+  b.textContent = 'Tento prohlížeč neumí ukládat data – po zavření zmizí. Otevři Měšec v jiném prohlížeči, nebo si před zavřením vždy ulož zálohu.';
+}
+
+/* ---------- data logic ---------- */
+function acc(id){ for (var i=0;i<S.accounts.length;i++) if (S.accounts[i].id === id) return S.accounts[i]; return null; }
+function cat(id){
+  if (!id) return null;
+  var all = S.cats.expense.concat(S.cats.income);
+  for (var i=0;i<all.length;i++) if (all[i].id === id) return all[i];
+  return null;
+}
+function tinfo(a){ return TYPES[a && a.type] || TYPES.bank; }
+
+function balances(upTo){
+  var b = {};
+  S.accounts.forEach(function(a){ b[a.id] = (!upTo || a.start <= upTo) ? (+a.initial || 0) : 0; });
+  S.tx.forEach(function(t){
+    if (upTo && t.date > upTo) return;
+    var v = +t.amount || 0;
+    if (t.type === 'expense') { if (t.acc in b) b[t.acc] -= v; }
+    else if (t.type === 'income' || t.type === 'reval') { if (t.acc in b) b[t.acc] += v; }
+    else if (t.type === 'transfer') { if (t.acc in b) b[t.acc] -= v; if (t.to in b) b[t.to] += v; }
+  });
+  return b;
+}
+function netWorth(upTo){
+  var b = balances(upTo), s = 0;
+  for (var k in b) s += b[k];
+  return s;
+}
+function monthStats(ym){
+  var m = {inc:0, exp:0, reval:0, byCat:{}, byInc:{}};
+  S.tx.forEach(function(t){
+    if (t.date.slice(0,7) !== ym) return;
+    var v = +t.amount || 0, k = t.cat || 'none';
+    if (t.type === 'expense') { m.exp += v; m.byCat[k] = (m.byCat[k] || 0) + v; }
+    else if (t.type === 'income') { m.inc += v; m.byInc[k] = (m.byInc[k] || 0) + v; }
+    else if (t.type === 'reval') { m.reval += v; }
+  });
+  return m;
+}
+/* Time series of net worth (or one account's balance) */
+function series(months, accId){
+  var ev = [], t = today();
+  var accs = accId ? S.accounts.filter(function(a){ return a.id === accId; }) : S.accounts;
+  accs.forEach(function(a){ ev.push([a.start, +a.initial || 0]); });
+  S.tx.forEach(function(x){
+    var v = +x.amount || 0, d = 0;
+    if (accId) {
+      if (x.acc === accId) d += (x.type === 'income' || x.type === 'reval') ? v : -v;
+      if (x.type === 'transfer' && x.to === accId) d += v;
+    } else {
+      d = x.type === 'expense' ? -v : (x.type === 'income' || x.type === 'reval') ? v : 0;
+    }
+    if (d) ev.push([x.date, d]);
+  });
+  ev.sort(function(a,b){ return a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0; });
+  var start = t;
+  ev.forEach(function(e){ if (e[0] < start) start = e[0]; });
+  if (months) { var dd = new Date(); dd.setMonth(dd.getMonth() - months); var s = fmtD(dd); if (s > start) start = s; }
+  var days = daysBetween(start, t), dates = [], d, i;
+  if (days <= 92) {
+    d = parseD(t);
+    for (i = 0; i <= days; i++) { dates.push(fmtD(d)); d.setDate(d.getDate()-1); }
+  } else if (days <= 750) {
+    d = parseD(t);
+    while (fmtD(d) > start) { dates.push(fmtD(d)); d.setDate(d.getDate()-7); }
+    dates.push(start);
+  } else {
+    dates.push(t);
+    var ym = addMonths(t.slice(0,7), -1);
+    while (monthEnd(ym) > start) { dates.push(monthEnd(ym)); ym = addMonths(ym, -1); }
+    dates.push(start);
+  }
+  dates.reverse();
+  var j = 0, sum = 0;
+  var vals = dates.map(function(dt){ while (j < ev.length && ev[j][0] <= dt) { sum += ev[j][1]; j++; } return sum; });
+  return {dates:dates, vals:vals};
+}
+
+/* ---------- charts ---------- */
+function roHtml(date, v, isLast){
+  return '<span>' + (isLast && date === today() ? 'Dnes' : dShort(date)) + '</span><b class="num">' + money(v) + '</b>';
+}
+function lineChart(id, ser){
+  var dates = ser.dates, vals = ser.vals, n = vals.length;
+  if (n < 2) return '<div class="chart-empty">Vývoj se ukáže, až budou záznamy alespoň ze dvou různých dnů.</div>';
+  var W = 340, H = 172, T = 12, B = 22, L = 2, R = 50;
+  var mn = Math.min.apply(null, vals), mx = Math.max.apply(null, vals);
+  if (mn === mx) { var p0 = Math.abs(mn)*0.05 || 1; mn -= p0; mx += p0; }
+  var pv = (mx - mn)*0.1; mn -= pv; mx += pv;
+  function X(i){ return L + (W-L-R)*i/(n-1); }
+  function Y(v){ return T + (H-T-B)*(1-(v-mn)/(mx-mn)); }
+  charts[id] = {dates:dates, vals:vals, X:X, Y:Y, W:W, L:L, R:R, n:n};
+  var grid = '', k, y;
+  for (k = 0; k <= 3; k++) {
+    var gv = mn + (mx-mn)*k/3; y = Y(gv).toFixed(1);
+    grid += '<line class="gl" x1="'+L+'" x2="'+(W-R+4)+'" y1="'+y+'" y2="'+y+'"/><text class="gt" x="'+W+'" y="'+(+y+3.5).toFixed(1)+'" text-anchor="end">'+compact(gv)+'</text>';
+  }
+  if (mn < 0 && mx > 0) { y = Y(0).toFixed(1); grid += '<line class="zl" x1="'+L+'" x2="'+(W-R+4)+'" y1="'+y+'" y2="'+y+'"/>'; }
+  var pts = vals.map(function(v,i){ return X(i).toFixed(1) + ' ' + Y(v).toFixed(1); });
+  var line = 'M' + pts.join('L');
+  var area = line + 'L' + X(n-1).toFixed(1) + ' ' + (H-B) + 'L' + X(0).toFixed(1) + ' ' + (H-B) + 'Z';
+  var lab = function(s){ var d = parseD(s); return d.getDate() + '. ' + (d.getMonth()+1) + '. ' + d.getFullYear(); };
+  return '<div class="readout" id="'+id+'-ro">' + roHtml(dates[n-1], vals[n-1], true) + '</div>' +
+    '<svg class="lc" id="'+id+'" data-chart="'+id+'" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Graf vývoje hodnoty v čase">' +
+    '<defs><linearGradient id="'+id+'-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="currentColor" stop-opacity=".16"/><stop offset="1" stop-color="currentColor" stop-opacity="0"/></linearGradient></defs>' +
+    grid +
+    '<path d="'+area+'" fill="url(#'+id+'-g)"/>' +
+    '<path class="ln" d="'+line+'" fill="none"/>' +
+    '<line class="guide" x1="0" x2="0" y1="'+T+'" y2="'+(H-B)+'" style="display:none"/>' +
+    '<circle class="mk" r="4" cx="'+X(n-1).toFixed(1)+'" cy="'+Y(vals[n-1]).toFixed(1)+'"/>' +
+    '<text class="gt" x="'+L+'" y="'+(H-5)+'">'+lab(dates[0])+'</text>' +
+    '<text class="gt" x="'+(W-R)+'" y="'+(H-5)+'" text-anchor="end">'+lab(dates[n-1])+'</text>' +
+    '</svg>';
+}
+function bindCharts(root){
+  (root || document).querySelectorAll('svg[data-chart]').forEach(function(svg){
+    if (svg._bound) return; svg._bound = true;
+    var c = charts[svg.getAttribute('data-chart')]; if (!c) return;
+    var g = svg.querySelector('.guide'), mk = svg.querySelector('.mk'), ro = document.getElementById(svg.id + '-ro');
+    function show(i){
+      var x = c.X(i), y = c.Y(c.vals[i]);
+      mk.setAttribute('cx', x); mk.setAttribute('cy', y);
+      g.setAttribute('x1', x); g.setAttribute('x2', x); g.style.display = '';
+      ro.innerHTML = roHtml(c.dates[i], c.vals[i], i === c.n-1);
+    }
+    function move(e){
+      var r = svg.getBoundingClientRect();
+      var px = (e.clientX - r.left)/r.width*c.W;
+      var i = Math.round((px - c.L)/(c.W - c.L - c.R)*(c.n-1));
+      show(Math.max(0, Math.min(c.n-1, i)));
+    }
+    function reset(){ show(c.n-1); g.style.display = 'none'; }
+    svg.addEventListener('pointermove', move);
+    svg.addEventListener('pointerdown', move);
+    svg.addEventListener('pointerleave', function(e){ if (e.pointerType === 'mouse') reset(); });
+    svg.addEventListener('pointercancel', reset);
+  });
+}
+function donut(list, total){
+  var r = 56, C = 2*Math.PI*r, off = 0;
+  var segs = list.map(function(x){
+    var len = x.v/total*C;
+    var s = '<circle r="'+r+'" cx="70" cy="70" fill="none" stroke="'+x.color+'" stroke-width="18" stroke-dasharray="'+Math.max(len-1.5,0.6).toFixed(2)+' '+C.toFixed(2)+'" stroke-dashoffset="'+(-off).toFixed(2)+'"/>';
+    off += len; return s;
+  }).join('');
+  return '<svg class="donut" viewBox="0 0 140 140" role="img" aria-label="Rozdělení výdajů podle kategorií"><g transform="rotate(-90 70 70)">'+segs+'</g>' +
+    '<text class="dl" x="70" y="64" text-anchor="middle">Výdaje celkem</text><text class="dv serif" x="70" y="84" text-anchor="middle">'+compact(total)+'</text></svg>';
+}
+function barChart(data){
+  var W = 340, H = 165, T = 8, B = 20;
+  var mx = 1; data.forEach(function(d){ mx = Math.max(mx, d.inc, d.exp); });
+  var gw = W/data.length, bw = Math.min(10, gw*0.32), s = '';
+  data.forEach(function(d){
+    var cx = gw*data.indexOf(d) + gw/2, hi = (H-T-B)*d.inc/mx, he = (H-T-B)*d.exp/mx;
+    var mo = +d.ym.slice(5,7) - 1;
+    s += '<rect class="bi" x="'+(cx-bw-1).toFixed(1)+'" y="'+(H-B-hi).toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+hi.toFixed(1)+'" rx="2"/>';
+    s += '<rect class="be" x="'+(cx+1).toFixed(1)+'" y="'+(H-B-he).toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+he.toFixed(1)+'" rx="2"/>';
+    s += '<text class="gt" x="'+cx.toFixed(1)+'" y="'+(H-5)+'" text-anchor="middle"'+(d.ym === ui.statMonth ? ' style="fill:var(--ink);font-weight:700"' : '')+'>'+MS[mo]+'</text>';
+    s += '<rect class="hit" x="'+(gw*data.indexOf(d)).toFixed(1)+'" y="0" width="'+gw.toFixed(1)+'" height="'+H+'" onclick="App.statGo(\''+d.ym+'\')"><title>'+ymLabel(d.ym)+'</title></rect>';
+  });
+  return '<svg class="lc" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Příjmy a výdaje za posledních 12 měsíců"><line class="gl" x1="0" x2="'+W+'" y1="'+(H-B)+'" y2="'+(H-B)+'"/>'+s+'</svg>';
+}
+
+/* ---------- shared fragments ---------- */
+function strip(m){
+  var bal = m.inc - m.exp;
+  return '<div class="strip">' +
+    '<div><div class="k">Příjmy</div><div class="v num pos">'+money(m.inc)+'</div></div>' +
+    '<div><div class="k">Výdaje</div><div class="v num">'+money(m.exp)+'</div></div>' +
+    '<div><div class="k">Bilance</div><div class="v num '+(bal >= 0 ? 'pos' : 'neg')+'">'+money(bal, true)+'</div></div></div>';
+}
+function monthNav(kind, ym){
+  return '<div class="mnav"><button onclick="App.month(\''+kind+'\',-1)" aria-label="Předchozí měsíc">‹</button><b class="serif">'+ymLabel(ym)+'</b><button onclick="App.month(\''+kind+'\',1)" aria-label="Další měsíc">›</button></div>';
+}
+function txRow(t, ctx){
+  var a = acc(t.acc), icon, title, sub, amt, cls = '';
+  if (t.type === 'transfer') {
+    var b = acc(t.to), inn = ctx && t.to === ctx;
+    icon = '🔁'; title = t.note ? esc(t.note) : 'Převod';
+    if (ctx) { sub = dShort(t.date) + ', ' + (inn ? 'z účtu ' + esc(a ? a.name : '?') : 'na ' + esc(b ? b.name : '?')); amt = money(inn ? t.amount : -t.amount, true); cls = inn ? 'pos' : ''; }
+    else { sub = esc((a ? a.name : '?') + ' → ' + (b ? b.name : '?')); amt = money(t.amount); cls = 'mute'; }
+  } else if (t.type === 'reval') {
+    icon = '📊'; title = t.note ? esc(t.note) : 'Změna hodnoty';
+    sub = ctx ? dShort(t.date) : esc(a ? a.name : '');
+    amt = money(t.amount, true); cls = t.amount >= 0 ? 'pos' : 'neg';
+  } else {
+    var c = cat(t.cat);
+    icon = c ? c.icon : (t.type === 'income' ? '💰' : '📦');
+    title = esc(c ? c.name : 'Bez kategorie');
+    sub = ctx ? esc([dShort(t.date), t.note].filter(Boolean).join(', ')) : esc([t.note, a && a.name].filter(Boolean).join(', '));
+    amt = t.type === 'expense' ? money(-t.amount) : money(t.amount, true);
+    cls = t.type === 'income' ? 'pos' : '';
+  }
+  return '<button class="row" onclick="App.editTx(\''+t.id+'\')"><span class="ico">'+icon+'</span><div class="main"><div class="t">'+title+'</div><div class="s">'+sub+'</div></div><div class="amt '+cls+'">'+amt+'</div></button>';
+}
+function accRow(a, bal){
+  var t = tinfo(a);
+  return '<button class="row" onclick="App.accDetail(\''+a.id+'\')"><span class="ico">'+t.i+'</span><div class="main"><div class="t">'+esc(a.name)+'</div><div class="s">'+esc(t.n)+'</div></div><div class="amt '+(bal < 0 ? 'neg' : '')+'">'+money(bal)+'</div></button>';
+}
+function isIOS(){ return /iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1); }
+function isStandalone(){ return navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches); }
+function installHint(){
+  if (!isIOS() || isStandalone()) return '';
+  return '<div class="notice" style="cursor:default;border-style:solid"><b>Přidej si Měšec na plochu.</b> Dole v Safari klepni na Sdílet a pak na Přidat na plochu. Spouštěj ho potom jen z plochy – funguje tak i bez internetu a data tam má oddělená od Safari.</div>';
+}
+function vEmpty(){
+  return installHint() + '<div class="welcome"><div class="big serif">Začni tím, kde máš peníze</div>' +
+    '<p>Přidej své účty: běžný účet, hotovost v peněžence, spoření, investice, ale i auto nebo hypotéku. Pak už jen zapisuješ pohyby a čisté jmění se počítá samo.</p>' +
+    '<div class="stack"><button class="btn" onclick="App.accForm()">Přidat první účet</button>' +
+    '<button class="btn ghost" onclick="App.loadSample()">Vyzkoušet na ukázkových datech</button></div></div>';
+}
+
+/* ---------- views ---------- */
+function vOverview(){
+  if (!S.accounts.length) return vEmpty();
+  var b = balances(), assets = 0, debts = 0, hint = installHint();
+  S.accounts.forEach(function(a){ if (a.type === 'debt') debts += b[a.id]; else assets += b[a.id]; });
+  var nw = assets + debts;
+  var delta = nw - netWorth(monthEnd(addMonths(curYM(), -1)));
+  var ym = curYM(), m = monthStats(ym);
+  var h = hint + '<section class="hero"'+(hint ? ' style="margin-top:16px"' : '')+'><div class="label">Čisté jmění</div>' +
+    '<div class="big serif num"><span class="dbl">'+money(nw)+'</span></div>' +
+    '<div class="delta '+(delta >= 0 ? 'pos' : 'neg')+'">'+money(delta, true)+' <span class="muted" style="font-weight:400">od začátku měsíce</span></div>' +
+    (debts ? '<div class="sub">Aktiva '+money(assets)+', závazky '+money(-debts)+'</div>' : '') + '</section>';
+
+  var ranges = [[3,'3 měsíce'],[12,'Rok'],[36,'3 roky'],[0,'Vše']];
+  h += '<section class="panel chart"><div class="seg sm" role="tablist">' + ranges.map(function(r){
+    return '<button class="'+(ui.range === r[0] ? 'on' : '')+'" onclick="App.setRange('+r[0]+')">'+r[1]+'</button>';
+  }).join('') + '</div>' + lineChart('nw', series(ui.range)) + '</section>';
+
+  if (S.tx.length >= 5) {
+    var since = S.lastBackup ? daysBetween(S.lastBackup, today()) : null;
+    if (since === null || since >= 14) {
+      h += '<button class="notice" onclick="App.exportJSON()">' + (since === null ? 'Zatím nemáš žádnou zálohu.' : 'Poslední záloha je ' + since + ' dní stará.') + ' <b>Uložit zálohu</b></button>';
+    }
+  }
+
+  h += '<h2>' + ymLabel(ym) + '</h2>' + strip(m);
+  if (Math.abs(m.reval) >= 0.5) h += '<p class="reval">Změna hodnoty investic a majetku: <b class="'+(m.reval >= 0 ? 'pos' : 'neg')+'">'+money(m.reval, true)+'</b></p>';
+
+  var top = Object.keys(m.byCat).map(function(k){ return [k, m.byCat[k]]; }).sort(function(a,b){ return b[1]-a[1]; }).slice(0,4);
+  if (top.length) {
+    h += '<div class="ghead"><h2>Kam jdou peníze</h2><button class="link" onclick="App.tab(\'stats\')">Statistiky</button></div><div class="list">' +
+      top.map(function(x){ var c = cat(x[0]);
+        return '<div class="row"><span class="ico">'+(c ? c.icon : '📦')+'</span><div class="main"><div class="t">'+esc(c ? c.name : 'Bez kategorie')+'</div><div class="bar"><i style="width:'+(x[1]/top[0][1]*100).toFixed(1)+'%"></i></div></div><div class="amt">'+money(x[1])+'</div></div>';
+      }).join('') + '</div>';
+  }
+  var recent = S.tx.slice().sort(sortTx).slice(0,5);
+  h += '<div class="ghead"><h2>Poslední pohyby</h2>' + (recent.length ? '<button class="link" onclick="App.tab(\'tx\')">Všechny</button>' : '') + '</div>';
+  h += recent.length ? '<div class="list">' + recent.map(function(t){ return txRow(t); }).join('') + '</div>'
+    : '<div class="empty">Zatím žádné pohyby. Přidej první nákup nebo výplatu tlačítkem +.</div>';
+  return h;
+}
+
+function vTx(){
+  if (!S.accounts.length) return vEmpty();
+  var f = [['all','Vše'],['expense','Výdaje'],['income','Příjmy'],['transfer','Převody']];
+  return '<div class="search"><input type="search" placeholder="Hledat v poznámkách, kategoriích, účtech" value="'+esc(ui.q)+'" oninput="App.search(this.value)" aria-label="Hledat"></div>' +
+    '<div class="seg sm">' + f.map(function(x){ return '<button class="'+(ui.txFilter === x[0] ? 'on' : '')+'" onclick="App.setFilter(\''+x[0]+'\')">'+x[1]+'</button>'; }).join('') + '</div>' +
+    '<div id="txlist">' + txListHtml() + '</div>';
+}
+function txListHtml(){
+  var q = ui.q.trim().toLowerCase(), items;
+  if (q) {
+    items = S.tx.filter(function(t){
+      var c = cat(t.cat), a = acc(t.acc), b = acc(t.to);
+      return [t.note, c && c.name, a && a.name, b && b.name, String(t.amount)].some(function(s){ return s && String(s).toLowerCase().indexOf(q) >= 0; });
+    });
+  } else {
+    items = S.tx.filter(function(t){ return t.date.slice(0,7) === ui.txMonth; });
+  }
+  if (ui.txFilter !== 'all') items = items.filter(function(t){ return ui.txFilter === 'transfer' ? (t.type === 'transfer' || t.type === 'reval') : t.type === ui.txFilter; });
+  items.sort(sortTx);
+  var h = q ? '<p class="muted small" style="margin:14px 2px 0">Nalezeno '+items.length+' '+pl(items.length,'pohyb','pohyby','pohybů')+' ve všech měsících</p>'
+            : '<div class="mt"></div>' + monthNav('tx', ui.txMonth) + strip(monthStats(ui.txMonth));
+  if (!items.length) return h + '<div class="empty">' + (q ? 'Nic takového jsem nenašel.' : 'V tomhle měsíci nejsou žádné pohyby.') + '</div>';
+  var groups = [], cur = null;
+  items.forEach(function(t){ if (!cur || cur.d !== t.date) { cur = {d:t.date, items:[]}; groups.push(cur); } cur.items.push(t); });
+  groups.forEach(function(g){
+    var sum = 0;
+    g.items.forEach(function(t){ if (t.type === 'expense') sum -= t.amount; else if (t.type === 'income') sum += t.amount; });
+    h += '<div class="dayhead"><span>'+dayLabel(g.d)+'</span><span class="num">'+(sum ? money(sum, true) : '')+'</span></div>';
+    h += '<div class="list">' + g.items.map(function(t){ return txRow(t); }).join('') + '</div>';
+  });
+  return h;
+}
+
+function vAssets(){
+  if (!S.accounts.length) return vEmpty();
+  var b = balances(), g = {liquid:0, invest:0, property:0, debt:0};
+  S.accounts.forEach(function(a){ g[tinfo(a).g] += b[a.id]; });
+  var assets = g.liquid + g.invest + g.property, nw = assets + g.debt;
+  var h = '<section class="hero compact"><div class="label">Čisté jmění</div><div class="big serif num"><span class="dbl">'+money(nw)+'</span></div>' +
+    '<div class="sub">Aktiva '+money(assets)+(g.debt ? ', závazky '+money(-g.debt) : '')+'</div>';
+  var pos = ['liquid','invest','property'].filter(function(k){ return g[k] > 0; });
+  var ptot = pos.reduce(function(s,k){ return s + g[k]; }, 0);
+  if (ptot > 0) {
+    h += '<div class="alloc">' + pos.map(function(k){ return '<i style="flex:'+g[k]+';background:'+GCOL[k]+'"></i>'; }).join('') + '</div>';
+    h += '<div class="legend">' + pos.map(function(k){ var lab = GROUPS.filter(function(x){ return x[0] === k; })[0][1]; return '<span><i style="background:'+GCOL[k]+'"></i>'+lab+' '+pct(g[k]/ptot)+'</span>'; }).join('') + '</div>';
+  }
+  h += '</section>';
+  GROUPS.forEach(function(gr){
+    var list = S.accounts.filter(function(a){ return tinfo(a).g === gr[0]; });
+    if (!list.length) return;
+    list.sort(function(x,y){ return Math.abs(b[y.id]) - Math.abs(b[x.id]); });
+    h += '<div class="ghead"><h2>'+gr[1]+'</h2><span class="num">'+money(g[gr[0]])+'</span></div><div class="list">' +
+      list.map(function(a){ return accRow(a, b[a.id]); }).join('') + '</div>';
+  });
+  h += '<button class="btn ghost mt" onclick="App.accForm()">Přidat účet nebo majetek</button>';
+  return h;
+}
+
+function vStats(){
+  if (!S.accounts.length) return vEmpty();
+  var ym = ui.statMonth, m = monthStats(ym);
+  var list = Object.keys(m.byCat).map(function(k){ return {id:k, v:m.byCat[k], c:cat(k)}; }).sort(function(a,b){ return b.v - a.v; });
+  list.forEach(function(x,i){ x.color = PALETTE[i % PALETTE.length]; });
+  var h = '<div class="mt"></div>' + monthNav('stat', ym) + strip(m);
+  if (list.length) {
+    h += '<h2>Výdaje podle kategorií</h2><div class="panel donut-wrap">' + donut(list, m.exp) + '</div><div class="list">' +
+      list.map(function(x){
+        return '<div class="row"><span class="dot" style="background:'+x.color+'"></span><div class="main"><div class="t">'+(x.c ? x.c.icon + ' ' + esc(x.c.name) : 'Bez kategorie')+'</div><div class="bar"><i style="width:'+(x.v/list[0].v*100).toFixed(1)+'%;background:'+x.color+'"></i></div></div><div class="amt-col"><div class="amt">'+money(x.v)+'</div><div class="s">'+pct(x.v/m.exp)+'</div></div></div>';
+      }).join('') + '</div>';
+  } else {
+    h += '<div class="empty">V tomhle měsíci nejsou zapsané žádné výdaje.</div>';
+  }
+  var inc = Object.keys(m.byInc).map(function(k){ return {v:m.byInc[k], c:cat(k)}; }).sort(function(a,b){ return b.v - a.v; });
+  if (inc.length) {
+    h += '<h2>Příjmy</h2><div class="list">' + inc.map(function(x){
+      return '<div class="row"><span class="ico">'+(x.c ? x.c.icon : '💰')+'</span><div class="main"><div class="t">'+esc(x.c ? x.c.name : 'Bez kategorie')+'</div></div><div class="amt pos">'+money(x.v)+'</div></div>';
+    }).join('') + '</div>';
+  }
+  var data = [], i, mi = 0, se = 0, cnt = 0;
+  for (i = 11; i >= 0; i--) {
+    var y2 = addMonths(curYM(), -i), s2 = monthStats(y2);
+    data.push({ym:y2, inc:s2.inc, exp:s2.exp});
+    if (s2.inc || s2.exp) { mi += s2.inc; se += s2.exp; cnt++; }
+  }
+  h += '<h2>Posledních 12 měsíců</h2><div class="panel">' + barChart(data) +
+    '<div class="legend" style="margin-top:6px"><span><i style="background:var(--green)"></i>Příjmy</span><span><i style="background:var(--red)"></i>Výdaje</span><span>Klepnutím vybereš měsíc</span></div></div>';
+  if (cnt) {
+    h += '<div class="avg"><div>Průměrné příjmy<b>'+money(Math.round(mi/cnt))+'</b></div><div>Průměrné výdaje<b>'+money(Math.round(se/cnt))+'</b></div><div>Míra úspor<b class="'+(mi-se >= 0 ? 'pos' : 'neg')+'">'+(mi > 0 ? pct((mi-se)/mi) : '–')+'</b></div></div>';
+    h += '<p class="muted small">Průměr z '+cnt+' '+pl(cnt,'měsíce','měsíců','měsíců')+', ve kterých máš zapsané pohyby.</p>';
+  }
+  return h;
+}
+
+function catEditor(kind, title){
+  return '<h2>'+title+'</h2><div class="tags">' + S.cats[kind].map(function(c){
+    return '<span class="tag">'+c.icon+' '+esc(c.name)+'<button onclick="App.delCat(\''+kind+'\',\''+c.id+'\')" aria-label="Smazat kategorii '+esc(c.name)+'">×</button></span>';
+  }).join('') + '</div>' +
+  '<div class="addcat"><input id="ci-'+kind+'" class="emo" placeholder="🙂" maxlength="8" aria-label="Ikona kategorie"><input id="cn-'+kind+'" placeholder="Nová kategorie" aria-label="Název kategorie"><button class="btn small" onclick="App.addCat(\''+kind+'\')">Přidat</button></div>';
+}
+function vSettings(){
+  return '<h2 style="margin-top:12px">Záloha</h2>' +
+    '<p class="note">Všechno je uložené jen v tomhle prohlížeči v telefonu. Když aplikaci smažeš z plochy, vymažeš data Safari nebo změníš telefon, data tu nebudou. Záloha je jeden soubor, ze kterého je kdykoli obnovíš.</p>' +
+    '<p class="muted small">Poslední záloha: '+(S.lastBackup ? dShort(S.lastBackup) : 'zatím žádná')+'</p>' +
+    '<div class="stack"><button class="btn" onclick="App.exportJSON()">Uložit zálohu</button>' +
+    '<button class="btn ghost" onclick="App.importClick()">Obnovit ze zálohy</button>' +
+    '<button class="btn ghost" onclick="App.exportCSV()">Exportovat pohyby do tabulky (CSV)</button></div>' +
+    '<h2>Měna</h2><label class="field"><span>Označení u částek</span><input value="'+esc(S.currency)+'" maxlength="5" onchange="App.setCurrency(this.value)"></label>' +
+    catEditor('expense','Kategorie výdajů') + catEditor('income','Kategorie příjmů') +
+    '<h2>Ostatní</h2><div class="stack"><button class="btn ghost" onclick="App.loadSample()">Načíst ukázková data</button>' +
+    '<button class="btn danger" onclick="App.wipe()">Smazat všechna data</button></div>' +
+    '<p class="muted small center" style="margin-top:28px">Měšec běží celý v telefonu, funguje bez internetu a nic nikam neodesílá.</p>';
+}
+
+/* ---------- render ---------- */
+var TITLES = {overview:'Přehled', tx:'Pohyby', assets:'Majetek', stats:'Statistiky', settings:'Nastavení'};
+function render(){
+  charts = {};
+  var v = ui.view;
+  $('#title').textContent = TITLES[v];
+  document.querySelectorAll('nav.tabs button').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-v') === v); });
+  $('#fab').hidden = (v === 'settings' || !S.accounts.length);
+  var fn = {overview:vOverview, tx:vTx, assets:vAssets, stats:vStats, settings:vSettings}[v];
+  $('#view').innerHTML = fn();
+  bindCharts($('#view'));
+}
+function tab(v){ ui.view = v; render(); window.scrollTo(0,0); }
+
+/* ---------- sheet ---------- */
+function openSheet(html, after){
+  var keepScroll = !$('#sheetWrap').hidden && document.getElementById('txf') && html.indexOf('id="txf"') >= 0;
+  $('#sheet').innerHTML = html;
+  $('#sheetWrap').hidden = false;
+  if (!keepScroll) document.querySelector('.sheet').scrollTop = 0;
+  document.body.classList.add('locked');
+  if (after) after();
+}
+function closeSheet(){
+  $('#sheetWrap').hidden = true;
+  document.body.classList.remove('locked');
+}
+
+/* ---------- transactions ---------- */
+function defaultAcc(){
+  if (S.lastAcc && acc(S.lastAcc)) return S.lastAcc;
+  var l = S.accounts.filter(function(a){ return tinfo(a).g === 'liquid'; })[0];
+  return (l || S.accounts[0]).id;
+}
+function addTx(type){
+  if (!S.accounts.length) { toast('Nejdřív přidej účet, na který budeš pohyby zapisovat.'); accForm(); return; }
+  draft = {id:null, type:type || 'expense', amount:'', acc:defaultAcc(), to:'', cat:'', date:today(), note:''};
+  txSheet(false);
+}
+function editTx(id){
+  var t = S.tx.filter(function(x){ return x.id === id; })[0]; if (!t) return;
+  draft = Object.assign({}, t, {amount:String(t.amount).replace('.', ','), to:t.to || '', cat:t.cat || '', note:t.note || ''});
+  txSheet(true);
+}
+function readDraft(){
+  var f = document.getElementById('txf'); if (!f || !draft) return;
+  var e = f.elements;
+  draft.amount = e.amount.value; draft.date = e.date.value; draft.note = e.note.value;
+  if (e.acc) draft.acc = e.acc.value;
+  if (e.to) draft.to = e.to.value;
+}
+function setTxType(t){ readDraft(); if (draft.type !== t) draft.cat = ''; draft.type = t; txSheet(true); }
+function pickCat(id){
+  readDraft(); draft.cat = id;
+  document.querySelectorAll('#txf .chip').forEach(function(c){ c.classList.toggle('on', c.getAttribute('data-cat') === id); });
+}
+function txSheet(keep){
+  var d = draft, isR = d.type === 'reval';
+  function opts(sel){ return S.accounts.map(function(a){ return '<option value="'+a.id+'"'+(a.id === sel ? ' selected' : '')+'>'+tinfo(a).i+' '+esc(a.name)+'</option>'; }).join(''); }
+  var cats = d.type === 'expense' ? S.cats.expense : d.type === 'income' ? S.cats.income : [];
+  var toSel = d.to || (S.accounts.filter(function(a){ return a.id !== d.acc; })[0] || {}).id;
+  var types = [['expense','Výdaj'],['income','Příjem'],['transfer','Převod']];
+  var html = '<form id="txf" onsubmit="App.saveTx(event)" autocomplete="off">' +
+    '<h3 class="serif">' + (d.id ? (isR ? 'Změna hodnoty' : 'Upravit pohyb') : 'Nový pohyb') + '</h3>' +
+    (isR ? '<p class="muted small">Přecenění nebo srovnání zůstatku. Nepočítá se do příjmů ani výdajů, jen do čistého jmění. Záporná částka znamená pokles.</p>'
+         : '<div class="seg" style="margin-top:12px">' + types.map(function(x){ return '<button type="button" class="'+(d.type === x[0] ? 'on' : '')+'" onclick="App.setTxType(\''+x[0]+'\')">'+x[1]+'</button>'; }).join('') + '</div>') +
+    '<div class="amount-wrap"><input name="amount" class="amount-input serif num" inputmode="decimal" placeholder="0" value="'+esc(d.amount)+'" aria-label="Částka"><span class="cur">'+esc(S.currency)+'</span></div>' +
+    (cats.length ? '<div class="chips">' + cats.map(function(c){ return '<button type="button" class="chip'+(c.id === d.cat ? ' on' : '')+'" data-cat="'+c.id+'" onclick="App.pickCat(\''+c.id+'\')"><span class="e">'+c.icon+'</span>'+esc(c.name)+'</button>'; }).join('') + '</div>' : '') +
+    '<label class="field"><span>'+(d.type === 'transfer' ? 'Z účtu' : 'Účet')+'</span><select name="acc">'+opts(d.acc)+'</select></label>' +
+    (d.type === 'transfer' ? '<label class="field"><span>Na účet</span><select name="to">'+opts(toSel)+'</select></label>' : '') +
+    '<label class="field"><span>Datum</span><input type="date" name="date" value="'+esc(d.date)+'" required></label>' +
+    '<label class="field"><span>Poznámka</span><input name="note" value="'+esc(d.note)+'" placeholder="'+(d.type === 'transfer' ? 'třeba Výběr z bankomatu' : d.type === 'income' ? 'třeba Výplata za říjen' : 'třeba Lidl, oběd s kolegy')+'"></label>' +
+    '<button class="btn" type="submit">'+(d.id ? 'Uložit změny' : 'Přidat pohyb')+'</button>' +
+    (d.id ? '<button class="btn danger" type="button" onclick="App.delTx(\''+d.id+'\')">Smazat pohyb</button>' : '') +
+    '</form>';
+  openSheet(html, function(){
+    if (!keep) setTimeout(function(){ var i = document.querySelector('#txf [name=amount]'); if (i) i.focus(); }, 60);
+  });
+}
+function saveTx(e){
+  e.preventDefault(); readDraft();
+  var d = draft, amt = parseAmt(d.amount);
+  if (!isFinite(amt) || amt === 0) { toast('Zadej částku.'); return; }
+  if (d.type !== 'reval') amt = Math.abs(amt);
+  if (!d.date) { toast('Vyber datum.'); return; }
+  if ((d.type === 'expense' || d.type === 'income') && !d.cat) { toast('Vyber kategorii.'); return; }
+  if (d.type === 'transfer' && (!d.to || d.to === d.acc)) { toast('Převod musí jít mezi dvěma různými účty.'); return; }
+  var t = {id:d.id || uid(), date:d.date, type:d.type, amount:Math.round(amt*100)/100, acc:d.acc, note:(d.note || '').trim()};
+  if (d.type === 'transfer') t.to = d.to;
+  if (d.type === 'expense' || d.type === 'income') t.cat = d.cat;
+  var idx = -1;
+  S.tx.forEach(function(x,i){ if (x.id === t.id) idx = i; });
+  if (idx >= 0) S.tx[idx] = t; else S.tx.push(t);
+  if (d.type !== 'reval') S.lastAcc = d.acc;
+  save(); closeSheet(); render();
+  toast(d.id ? 'Změny uloženy' : 'Pohyb přidán');
+}
+function delTx(id){
+  if (!confirm('Smazat tento pohyb?')) return;
+  S.tx = S.tx.filter(function(x){ return x.id !== id; });
+  save(); closeSheet(); render(); toast('Pohyb smazán');
+}
+
+/* ---------- accounts ---------- */
+function initLabel(type){ return type === 'debt' ? 'Kolik zbývá splatit' : (TYPES[type].g === 'liquid' ? 'Zůstatek' : 'Současná hodnota'); }
+function accForm(id){
+  var a = id ? acc(id) : null, type = a ? a.type : 'bank';
+  var init = a ? (type === 'debt' ? -a.initial : a.initial) : '';
+  openSheet('<form id="accf" onsubmit="App.saveAcc(event,\''+(id || '')+'\')" autocomplete="off">' +
+    '<h3 class="serif">'+(a ? 'Upravit účet' : 'Nový účet nebo majetek')+'</h3>' +
+    '<label class="field"><span>Název</span><input name="nm" required value="'+esc(a ? a.name : '')+'" placeholder="třeba Běžný účet, Peněženka, ETF"></label>' +
+    '<label class="field"><span>Druh</span><select name="type" onchange="App.accTypeChange(this.value)">' +
+      Object.keys(TYPES).map(function(k){ return '<option value="'+k+'"'+(k === type ? ' selected' : '')+'>'+TYPES[k].i+' '+TYPES[k].n+'</option>'; }).join('') + '</select></label>' +
+    '<label class="field"><span id="initLabel">'+initLabel(type)+'</span><input name="initial" inputmode="decimal" placeholder="0" value="'+(init === '' ? '' : esc(String(init).replace('.', ',')))+'"></label>' +
+    '<label class="field"><span>Ke dni</span><input type="date" name="start" required value="'+(a ? a.start : today())+'"></label>' +
+    '<p class="hint">Zůstatek k tomuto dni už obsahuje všechno, co proběhlo dřív. Zapisuj jen pohyby od tohoto dne dál, jinak se započítají dvakrát.</p>' +
+    '<button class="btn" type="submit">'+(a ? 'Uložit změny' : 'Přidat účet')+'</button>' +
+    (a ? '<button class="btn danger" type="button" onclick="App.delAcc(\''+id+'\')">Smazat účet</button>' : '') +
+    '</form>', function(){
+      if (!a) setTimeout(function(){ var i = document.querySelector('#accf [name=nm]'); if (i) i.focus(); }, 60);
+    });
+}
+function accTypeChange(v){ var l = document.getElementById('initLabel'); if (l) l.textContent = initLabel(v); }
+function saveAcc(e, id){
+  e.preventDefault();
+  var f = e.target.elements, name = f.nm.value.trim(), type = f.type.value, init = parseAmt(f.initial.value);
+  if (!name) { toast('Zadej název.'); return; }
+  if (!isFinite(init)) init = 0;
+  if (type === 'debt') init = -Math.abs(init);
+  var start = f.start.value || today();
+  if (id) { var a = acc(id); a.name = name; a.type = type; a.initial = init; a.start = start; }
+  else S.accounts.push({id:uid(), name:name, type:type, initial:init, start:start});
+  save(); closeSheet(); render();
+  toast(id ? 'Účet upraven' : 'Účet přidán');
+}
+function delAcc(id){
+  var n = S.tx.filter(function(t){ return t.acc === id || t.to === id; }).length;
+  var msg = n ? 'Smazat účet i s ' + n + ' ' + pl(n,'pohybem','pohyby','pohyby') + '? Tohle nejde vrátit.' : 'Smazat tento účet?';
+  if (!confirm(msg)) return;
+  S.accounts = S.accounts.filter(function(a){ return a.id !== id; });
+  S.tx = S.tx.filter(function(t){ return t.acc !== id && t.to !== id; });
+  if (S.lastAcc === id) S.lastAcc = null;
+  save(); closeSheet(); render(); toast('Účet smazán');
+}
+function valueLabel(a){ var g = tinfo(a).g; return g === 'debt' ? 'Aktualizovat dluh' : g === 'liquid' ? 'Srovnat zůstatek' : 'Aktualizovat hodnotu'; }
+function accDetail(id){
+  var a = acc(id); if (!a) return;
+  var t = tinfo(a), bal = balances()[id];
+  var items = S.tx.filter(function(x){ return x.acc === id || x.to === id; }).sort(sortTx);
+  charts = {};
+  openSheet('<h3 class="serif">'+t.i+' '+esc(a.name)+'</h3><div class="muted small">'+esc(t.n)+'</div>' +
+    '<div class="big serif num mt-s '+(bal < 0 ? 'neg' : '')+'">'+money(bal)+'</div>' +
+    '<div class="panel chart">' + lineChart('acc_' + id, series(0, id)) + '</div>' +
+    '<div class="btnrow"><button class="btn" style="margin:0" onclick="App.updateValue(\''+id+'\')">'+valueLabel(a)+'</button><button class="btn ghost" style="margin:0" onclick="App.accForm(\''+id+'\')">Upravit účet</button></div>' +
+    '<h2>Pohyby</h2>' + (items.length ? '<div class="list">' + items.slice(0,40).map(function(x){ return txRow(x, id); }).join('') + '</div>' +
+      (items.length > 40 ? '<p class="muted small center">Zobrazeno posledních 40 z '+items.length+'.</p>' : '') : '<div class="empty">Na tomhle účtu zatím nejsou žádné pohyby.</div>'),
+    function(){ bindCharts($('#sheet')); });
+}
+function updateValue(id){
+  var a = acc(id); if (!a) return;
+  var debt = a.type === 'debt', bal = balances()[id], g = tinfo(a).g;
+  var cur = debt ? -bal : bal;
+  var expl = g === 'liquid' ? 'Zadej, kolik na účtu skutečně je. Rozdíl se zapíše jako srovnání zůstatku – hodí se, když jsi zapomněl něco zapsat.'
+           : debt ? 'Zadej, kolik aktuálně zbývá splatit (např. podle výpisu z banky). Rozdíl se započítá jako změna závazku.'
+           : 'Zadej aktuální tržní hodnotu. Rozdíl oproti minulé hodnotě se zapíše jako zhodnocení nebo ztráta.';
+  openSheet('<form id="valf" onsubmit="App.saveValue(event,\''+id+'\')" autocomplete="off">' +
+    '<h3 class="serif">'+valueLabel(a)+'</h3><p class="muted small">'+esc(a.name)+': teď '+money(cur)+'</p><p class="small">'+expl+'</p>' +
+    '<div class="amount-wrap"><input name="val" class="amount-input serif num" inputmode="decimal" value="'+esc(String(Math.round(cur*100)/100).replace('.', ','))+'" aria-label="Nová hodnota"><span class="cur">'+esc(S.currency)+'</span></div>' +
+    '<label class="field"><span>Ke dni</span><input type="date" name="date" required value="'+today()+'"></label>' +
+    '<label class="field"><span>Poznámka</span><input name="note" value="'+(g === 'liquid' ? 'Srovnání zůstatku' : g === 'debt' ? 'Aktualizace dluhu' : 'Přecenění')+'"></label>' +
+    '<button class="btn" type="submit">Uložit novou hodnotu</button>' +
+    '<button class="btn ghost" type="button" onclick="App.accDetail(\''+id+'\')">Zpět</button></form>',
+    function(){ setTimeout(function(){ var i = document.querySelector('#valf [name=val]'); if (i) { i.focus(); i.select(); } }, 60); });
+}
+function saveValue(e, id){
+  e.preventDefault();
+  var a = acc(id), f = e.target.elements, v = parseAmt(f.val.value), date = f.date.value || today();
+  if (!isFinite(v)) { toast('Zadej novou hodnotu.'); return; }
+  if (a.type === 'debt') v = -Math.abs(v);
+  var delta = Math.round((v - balances(date)[id])*100)/100;
+  if (Math.abs(delta) < 0.005) { toast('Hodnota se nezměnila.'); accDetail(id); return; }
+  S.tx.push({id:uid(), date:date, type:'reval', amount:delta, acc:id, note:f.note.value.trim()});
+  save(); render(); accDetail(id);
+  toast('Uloženo: ' + (delta > 0 ? '+' : '−') + NF.format(Math.abs(delta)) + ' ' + S.currency);
+}
+
+/* ---------- UI actions ---------- */
+function month(kind, d){
+  if (kind === 'tx') ui.txMonth = addMonths(ui.txMonth, d); else ui.statMonth = addMonths(ui.statMonth, d);
+  render();
+}
+function search(v){ ui.q = v; var el = document.getElementById('txlist'); if (el) el.innerHTML = txListHtml(); }
+function setFilter(f){ ui.txFilter = f; render(); }
+function setRange(r){ ui.range = r; render(); }
+function statGo(ym){ ui.statMonth = ym; render(); }
+
+/* ---------- settings ---------- */
+function download(name, text, mime){
+  var blob = new Blob([text], {type:mime});
+  try {
+    if (isIOS() && navigator.canShare && typeof File === 'function') {
+      var file = new File([blob], name, {type:mime});
+      if (navigator.canShare({files:[file]})) { return navigator.share({files:[file], title:name}).then(function(){ return true; }, function(){ return false; }); }
+    }
+  } catch(e) {}
+  var url = URL.createObjectURL(blob), a = document.createElement('a');
+  a.href = url; a.download = name; document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); }, 2000);
+  return Promise.resolve(true);
+}
+function exportJSON(){
+  var copy = Object.assign({}, S, {lastBackup:today(), exported:new Date().toISOString(), app:'Mesec'});
+  download('mesec-zaloha-' + today() + '.json', JSON.stringify(copy, null, 1), 'application/json').then(function(ok){
+    if (!ok) return;
+    S.lastBackup = today(); save(); render(); toast('Záloha uložena');
+  });
+}
+function importClick(){ document.getElementById('importFile').click(); }
+function importFile(input){
+  var f = input.files && input.files[0]; if (!f) return;
+  var r = new FileReader();
+  r.onload = function(){
+    try {
+      var d = JSON.parse(r.result);
+      if (!d || !Array.isArray(d.accounts) || !Array.isArray(d.tx)) throw new Error('bad');
+      var msg = 'Obnovit zálohu? Načte se ' + d.accounts.length + ' ' + pl(d.accounts.length,'účet','účty','účtů') + ' a ' + d.tx.length + ' ' + pl(d.tx.length,'pohyb','pohyby','pohybů') + '. Současná data se nahradí.';
+      if (confirm(msg)) { S = normalize(d); save(); ui.view = 'overview'; render(); toast('Záloha obnovena'); }
+    } catch(e) { toast('Tenhle soubor není záloha z Měšce.'); }
+    input.value = '';
+  };
+  r.readAsText(f);
+}
+function exportCSV(){
+  var TN = {expense:'Výdaj', income:'Příjem', transfer:'Převod', reval:'Změna hodnoty'};
+  var q = function(s){ s = String(s == null ? '' : s); return /[;"\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s; };
+  var rows = [['Datum','Typ','Částka','Účet','Na účet','Kategorie','Poznámka']];
+  S.tx.slice().sort(sortTx).reverse().forEach(function(t){
+    var a = acc(t.acc), b = acc(t.to), c = cat(t.cat);
+    var sign = t.type === 'expense' ? -t.amount : t.amount;
+    rows.push([t.date, TN[t.type] || t.type, String(sign).replace('.', ','), a ? a.name : '', b ? b.name : '', c ? c.name : '', t.note || '']);
+  });
+  download('mesec-pohyby-' + today() + '.csv', '\ufeff' + rows.map(function(r){ return r.map(q).join(';'); }).join('\r\n'), 'text/csv');
+}
+function setCurrency(v){ S.currency = v.trim() || 'Kč'; save(); toast('Měna změněna'); }
+function addCat(kind){
+  var n = document.getElementById('cn-' + kind), i = document.getElementById('ci-' + kind);
+  var name = n.value.trim(); if (!name) { toast('Napiš název kategorie.'); n.focus(); return; }
+  S.cats[kind].push({id:uid(), name:name, icon:i.value.trim() || '🏷️'});
+  save(); render(); toast('Kategorie přidána');
+}
+function delCat(kind, id){
+  var c = cat(id), n = S.tx.filter(function(t){ return t.cat === id; }).length;
+  var msg = 'Smazat kategorii „' + (c ? c.name : '') + '“?' + (n ? ' ' + n + ' ' + pl(n,'pohyb bude','pohyby budou','pohybů bude') + ' bez kategorie.' : '');
+  if (!confirm(msg)) return;
+  S.cats[kind] = S.cats[kind].filter(function(x){ return x.id !== id; });
+  save(); render();
+}
+function wipe(){
+  if (!confirm('Opravdu smazat všechny účty, pohyby a kategorie? Tohle nejde vrátit. Pokud si nejsi jistý, ulož si nejdřív zálohu.')) return;
+  S = defaultState(); save(); ui.view = 'overview'; render(); toast('Data smazána');
+}
+function loadSample(){
+  if ((S.accounts.length || S.tx.length) && !confirm('Ukázková data nahradí všechno, co v aplikaci teď máš. Pokračovat?')) return;
+  S = sampleData(); save(); ui.view = 'overview'; ui.txMonth = curYM(); ui.statMonth = curYM(); render(); window.scrollTo(0,0);
+  toast('Ukázková data načtena. Smažeš je v Nastavení.');
+}
+function sampleData(){
+  var s = defaultState(), now = new Date(), t = today();
+  var st = new Date(now.getFullYear(), now.getMonth() - 14, 1), start = fmtD(st);
+  function A(name, type, initial){ var a = {id:uid(), name:name, type:type, initial:initial, start:start}; s.accounts.push(a); return a.id; }
+  var bank = A('Běžný účet','bank',38000), cash = A('Peněženka','cash',2500), sav = A('Spořicí účet','savings',90000),
+      etf = A('ETF portfolio','invest',210000), btc = A('Bitcoin','crypto',25000), pen = A('Penzijní spoření','pension',64000),
+      car = A('Auto','property',280000), loan = A('Úvěr na auto','debt',-190000);
+  function E(n){ return s.cats.expense.filter(function(c){ return c.name === n; })[0].id; }
+  function I(n){ return s.cats.income.filter(function(c){ return c.name === n; })[0].id; }
+  function r(a, b){ return a + Math.random()*(b-a); }
+  function ri(a, b){ return Math.floor(r(a, b+1)); }
+  function tx(date, type, amount, accId, extra){
+    if (date > t) return;
+    var o = {id:uid(), date:date, type:type, amount:Math.round(amount), acc:accId, note:''};
+    s.tx.push(Object.assign(o, extra || {}));
+  }
+  var etfV = 210000, btcV = 25000;
+  for (var m = 0; m <= 14; m++) {
+    var y = st.getFullYear(), mo = st.getMonth() + m;
+    var dim = new Date(y, mo+1, 0).getDate();
+    var D = function(day){ return fmtD(new Date(y, mo, Math.min(day, dim))); };
+    tx(D(10),'income',52000,bank,{cat:I('Mzda'), note:'Výplata'});
+    if (m % 6 === 5) tx(D(10),'income',ri(15000,25000),bank,{cat:I('Bonus'), note:'Pololetní odměna'});
+    tx(D(28),'income',r(250,420),sav,{cat:I('Úroky a dividendy'), note:'Úrok'});
+    tx(D(12),'expense',16500,bank,{cat:E('Bydlení'), note:'Nájem'});
+    tx(D(15),'expense',2900,bank,{cat:E('Energie a služby'), note:'Elektřina a plyn'});
+    tx(D(18),'expense',549,bank,{cat:E('Energie a služby'), note:'Internet'});
+    tx(D(5),'expense',199,bank,{cat:E('Předplatné'), note:'Hudba'});
+    tx(D(7),'expense',259,bank,{cat:E('Předplatné'), note:'Filmy a seriály'});
+    tx(D(11),'transfer',6000,bank,{to:sav, note:'Spoření'});
+    tx(D(11),'transfer',7000,bank,{to:etf, note:'Pravidelná investice'});
+    tx(D(20),'transfer',5200,bank,{to:loan, note:'Splátka úvěru'});
+    tx(D(3),'transfer',2000,bank,{to:cash, note:'Výběr z bankomatu'});
+    var k, n = ri(6,9);
+    for (k = 0; k < n; k++) { var cashy = Math.random() < 0.3; tx(D(ri(1,28)),'expense',r(cashy ? 150 : 300, cashy ? 600 : 1700),cashy ? cash : bank,{cat:E('Potraviny'), note:['Lidl','Albert','Billa','Kaufland','Pekárna','Zelenina na trhu'][ri(0,5)]}); }
+    n = ri(3,6);
+    for (k = 0; k < n; k++) { var c2 = Math.random() < 0.5; tx(D(ri(1,28)),'expense',r(90,650),c2 ? cash : bank,{cat:E('Restaurace a kavárny'), note:['Oběd v práci','Kafe','Večeře s přáteli','Pizza'][ri(0,3)]}); }
+    tx(D(ri(1,14)),'expense',r(900,1600),bank,{cat:E('Doprava'), note:'Tankování'});
+    tx(D(ri(15,28)),'expense',r(900,1600),bank,{cat:E('Doprava'), note:'Tankování'});
+    if (Math.random() < 0.6) tx(D(ri(1,28)),'expense',r(200,900),bank,{cat:E('Zábava'), note:['Kino','Koncert','Bowling','Divadlo'][ri(0,3)]});
+    if (Math.random() < 0.35) tx(D(ri(1,28)),'expense',r(600,2800),bank,{cat:E('Oblečení')});
+    if (Math.random() < 0.3) tx(D(ri(1,28)),'expense',r(150,900),bank,{cat:E('Zdraví'), note:'Lékárna'});
+    if (Math.random() < 0.4) tx(D(ri(1,28)),'expense',r(250,1500),bank,{cat:E('Domácnost')});
+    if ((mo % 12 + 12) % 12 === 11) tx(D(ri(10,20)),'expense',r(6000,9000),bank,{cat:E('Dárky'), note:'Vánoční dárky'});
+    if ((mo % 12 + 12) % 12 === 6) tx(D(8),'expense',r(14000,22000),bank,{cat:E('Cestování'), note:'Dovolená'});
+    etfV += 7000;
+    var ch = etfV * r(-0.035, 0.05); tx(D(dim),'reval',ch,etf,{note:'Přecenění'}); if (D(dim) <= t) etfV += ch;
+    var cb = btcV * r(-0.14, 0.18); tx(D(dim),'reval',cb,btc,{note:'Přecenění'}); if (D(dim) <= t) btcV += cb;
+    tx(D(dim),'reval',r(700,1100),pen,{note:'Vklad, státní příspěvek a zhodnocení'});
+    tx(D(dim),'reval',-2300,car,{note:'Odhad poklesu hodnoty'});
+  }
+  tx(t,'expense',89,cash,{cat:E('Restaurace a kavárny'), note:'Kafe cestou'});
+  tx(t,'expense',642,bank,{cat:E('Potraviny'), note:'Albert'});
+  s.lastAcc = bank;
+  s.lastBackup = t;
+  return s;
+}
+
+/* ---------- init ---------- */
+window.App = {tab:tab, addTx:addTx, editTx:editTx, setTxType:setTxType, pickCat:pickCat, saveTx:saveTx, delTx:delTx,
+  accForm:accForm, accTypeChange:accTypeChange, saveAcc:saveAcc, delAcc:delAcc, accDetail:accDetail, updateValue:updateValue, saveValue:saveValue,
+  closeSheet:closeSheet, month:month, search:search, setFilter:setFilter, setRange:setRange, statGo:statGo,
+  exportJSON:exportJSON, importClick:importClick, importFile:importFile, exportCSV:exportCSV, setCurrency:setCurrency,
+  addCat:addCat, delCat:delCat, loadSample:loadSample, wipe:wipe};
+
+testStorage();
+S = load();
+ui.txMonth = curYM(); ui.statMonth = curYM();
+banner();
+try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(function(){}); } catch(e) {}
+document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeSheet(); });
+render();
+if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+  window.addEventListener('load', function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); });
+}
+})();
+</script>
+</body>
+</html>

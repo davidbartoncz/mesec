@@ -358,6 +358,13 @@ button.abox{appearance:none;font:inherit;color:inherit}
 .rchg{display:flex;justify-content:space-between;gap:10px;font-size:12px;color:var(--card-mute);margin-top:6px}
 .rchg b{font-weight:800;white-space:nowrap}
 
+.xamt{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:13px;color:var(--muted);font-weight:600}
+.xamt .inp{flex:1;min-height:42px;padding:8px 12px;text-align:right;font-weight:700;color:var(--ink)}
+.xamt b{color:var(--ink)}
+
+.hcard .row3.split{margin-top:14px}
+.hcard .row3.split .v{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
 </style>
 </head>
 <body>
@@ -458,7 +465,9 @@ var ICONS = {
   check:'M5 12.5l4.5 4.5L19 7'
 };
 
-var S, storageOk = true, charts = {}, draft = null;
+var CURS = {CZK:['Kč','Česká koruna'], EUR:['€','Euro'], USD:['$','Americký dolar'], GBP:['£','Britská libra'], CHF:['CHF','Švýcarský frank'], PLN:['zł','Polský zlotý'], HUF:['Ft','Maďarský forint'], SEK:['kr','Švédská koruna'], NOK:['kr','Norská koruna'], DKK:['kr','Dánská koruna'], JPY:['¥','Japonský jen'], CAD:['C$','Kanadský dolar'], AUD:['A$','Australský dolar']};
+var FX_DEFAULT = {EUR:25.2, USD:23.3, GBP:30, CHF:26.5, PLN:5.9, HUF:0.064, SEK:2.2, NOK:2.1, DKK:3.4, JPY:0.15, CAD:16.7, AUD:15.2};
+var S, storageOk = true, charts = {}, draft = null, fxCache = {}, fxBusy = false;
 var ui = {reveal:false, view:'tx', txMonth:null, statMonth:null, txFilter:'all', q:'', range:12, search:false, txOpen:false};
 var DARK = false;
 
@@ -495,8 +504,85 @@ function bigMoney(n){
   var r = Math.round(n * 100) / 100;
   return (r < 0 ? '−' : '') + NF.format(Math.abs(r)) + ' <span class="cur">' + esc(S.currency) + '</span>';
 }
+/* ---------- currencies ---------- */
+function accCur(a){ return (a && a.cur) || 'CZK'; }
+function curSym(c){ return !c || c === 'CZK' ? S.currency : (CURS[c] ? CURS[c][0] : c); }
+function fxNow(c){ if (!c || c === 'CZK') return 1; var f = S.fx || {}; return (f.rates && f.rates[c]) || FX_DEFAULT[c] || 1; }
+function fxAt(c, date){
+  if (!c || c === 'CZK') return 1;
+  if (!date || date >= today()) return fxNow(c);
+  var h = S.fx && S.fx.hist && S.fx.hist[c]; if (!h) return fxNow(c);
+  var ks = fxCache[c]; if (!ks) ks = fxCache[c] = Object.keys(h).sort();
+  if (!ks.length) return fxNow(c);
+  if (date < ks[0]) return h[ks[0]];
+  var lo = 0, hi = ks.length - 1;
+  while (lo < hi) { var mid = (lo + hi + 1) >> 1; if (ks[mid] <= date) lo = mid; else hi = mid - 1; }
+  return h[ks[lo]];
+}
+function czk(t){ var c = accCur(acc(t.acc)), v = +t.amount || 0; return c === 'CZK' ? v : v * (t.rate || fxAt(c, t.date)); }
+function moneyC(n, c, sign){
+  var r = Math.round(n * 100) / 100, p = '';
+  if (r < 0) p = '−'; else if (sign && r > 0) p = '+';
+  return p + NF.format(Math.abs(r)) + '\u00a0' + esc(curSym(c));
+}
+function fmtRate(v){ return v.toLocaleString('cs-CZ', {maximumFractionDigits: v < 1 ? 4 : 3}); }
+function usedCurs(){ var o = []; S.accounts.forEach(function(a){ var c = accCur(a); if (c !== 'CZK' && o.indexOf(c) < 0) o.push(c); }); return o; }
+function fetchRates(force){
+  var used = usedCurs();
+  if (!used.length || fxBusy) return;
+  S.fx = S.fx || {}; S.fx.rates = S.fx.rates || {}; S.fx.hist = S.fx.hist || {};
+  var age = S.fx.fetched ? (Date.now() - S.fx.fetched) / 36e5 : 1e9;
+  var missing = used.some(function(c){ return !S.fx.rates[c]; });
+  if (!force && !missing && age < 6) return;
+  if (navigator.onLine === false) { if (force) toast('Bez připojení k internetu'); return; }
+  fxBusy = true;
+  var sym = used.join(',');
+  fetch('https://api.frankfurter.dev/v1/latest?base=CZK&symbols=' + sym)
+    .then(function(r){ if (!r.ok) throw new Error('fx'); return r.json(); })
+    .then(function(j){ return {date:j.date, rates:j.rates || {}, src:'ECB'}; })
+    .catch(function(){
+      return fetch('https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/czk.json')
+        .then(function(r){ if (!r.ok) throw new Error('fx2'); return r.json(); })
+        .then(function(j){ var o = {}; used.forEach(function(c){ var v = j.czk && j.czk[c.toLowerCase()]; if (v) o[c] = v; }); return {date:j.date || today(), rates:o, src:'currency-api'}; });
+    })
+    .then(function(res){
+      var any = false;
+      used.forEach(function(c){
+        var v = res.rates[c]; if (!(v > 0)) return;
+        var r = Math.round(1 / v * 10000) / 10000;
+        S.fx.rates[c] = r; S.fx.hist[c] = S.fx.hist[c] || {}; S.fx.hist[c][res.date] = r; any = true;
+      });
+      if (any) { S.fx.date = res.date; S.fx.src = res.src; S.fx.fetched = Date.now(); fxCache = {}; }
+      return fetchHist(used);
+    })
+    .then(function(){ fxBusy = false; save(); render(); if (force) toast('Kurzy aktualizovány'); })
+    .catch(function(){ fxBusy = false; if (force) toast('Kurzy se nepodařilo stáhnout'); });
+}
+function fetchHist(used){
+  return Promise.all(used.map(function(c){
+    var start = null;
+    S.accounts.forEach(function(a){ if (accCur(a) === c && (!start || a.start < start)) start = a.start; });
+    var h = S.fx.hist[c] || {}, ks = Object.keys(h).sort(), have = ks.length ? ks[0] : null;
+    if (!start || (have && have <= start) || start >= today()) return null;
+    return fetch('https://api.frankfurter.dev/v1/' + start + '..' + (have || today()) + '?base=CZK&symbols=' + c)
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(j){
+        if (!j || !j.rates) return;
+        Object.keys(j.rates).forEach(function(d){ var v = j.rates[d][c]; if (v > 0) h[d] = Math.round(1 / v * 10000) / 10000; });
+        S.fx.hist[c] = h; fxCache = {};
+      }).catch(function(){});
+  }));
+}
+function setRate(c, v){
+  var r = parseAmt(v); if (!(r > 0)) { toast('Neplatný kurz'); render(); return; }
+  S.fx = S.fx || {}; S.fx.rates = S.fx.rates || {}; S.fx.hist = S.fx.hist || {};
+  S.fx.rates[c] = r; S.fx.hist[c] = S.fx.hist[c] || {}; S.fx.hist[c][today()] = r;
+  S.fx.date = today(); S.fx.src = 'ručně'; fxCache = {};
+  save(); render(); toast('Kurz uložen');
+}
 function hidden(){ return S.hideWealth !== false && !ui.reveal; }
 function hm(n, sign){ return hidden() ? '<span class="masked">•••••</span>\u00a0' + esc(S.currency) : money(n, sign); }
+function hmC(n, c, sign){ return hidden() ? '<span class="masked">•••••</span>\u00a0' + esc(curSym(c)) : moneyC(n, c, sign); }
 function dayHead(s){
   var d = parseD(s), y = new Date(); y.setDate(y.getDate() - 1);
   var wd = d.toLocaleDateString('cs-CZ', {weekday:'long'});
@@ -563,12 +649,12 @@ function txRow(t, ctx){
   if (t.type === 'transfer') {
     var b = acc(t.to), inn = ctx && t.to === ctx;
     tile = tileHtml('#5F6470', ic('swap')); title = t.note ? esc(t.note) : 'Převod';
-    if (ctx) { sub = dShort(t.date) + ' · ' + (inn ? 'z účtu ' + esc(a ? a.name : '?') : 'na ' + esc(b ? b.name : '?')); amt = money(inn ? t.amount : -t.amount, true); col = inn ? 'pos' : ''; }
-    else { sub = esc((a ? a.name : '?') + ' → ' + (b ? b.name : '?')); amt = money(t.amount); col = 'mute'; }
+    if (ctx) { sub = dShort(t.date) + ' · ' + (inn ? 'z účtu ' + esc(a ? a.name : '?') : 'na ' + esc(b ? b.name : '?')); amt = inn ? moneyC(t.amount2 != null ? t.amount2 : t.amount, accCur(b), true) : moneyC(-t.amount, accCur(a), true); col = inn ? 'pos' : ''; }
+    else { sub = esc((a ? a.name : '?') + ' → ' + (b ? b.name : '?')) + (t.amount2 != null ? ' · ' + moneyC(t.amount2, accCur(b)) : ''); amt = moneyC(t.amount, accCur(a)); col = 'mute'; }
   } else if (t.type === 'reval') {
     tile = tileHtml(t.amount >= 0 ? '#1D7348' : '#B9381F', ic('chart'));
     title = esc(t.note || 'Změna hodnoty'); sub = ctx ? dShort(t.date) : esc(a ? a.name : '');
-    amt = money(t.amount, true); col = t.amount >= 0 ? 'pos' : 'neg';
+    amt = moneyC(t.amount, accCur(a), true); col = t.amount >= 0 ? 'pos' : 'neg';
   } else if (t.type === 'refund') {
     c = cat(t.cat);
     var sx = t.sub ? subById(t.sub) : null, extra = '', rx = refTx(t);
@@ -577,17 +663,48 @@ function txRow(t, ctx){
     tile = tileHtml(catStyle(c).col, ic('undo'));
     title = 'Vratka · ' + esc(sx ? sx.name : rx ? (rx.note || (cat(rx.cat) || {}).name || 'nákup') : (c ? c.name : ''));
     sub = esc([ctx ? dShort(t.date) : '', extra, t.note, ctx ? '' : (a && a.name)].filter(Boolean).join(' · '));
-    amt = money(t.amount, true); col = 'pos';
+    amt = moneyC(t.amount, accCur(a), true); col = 'pos';
   } else {
     c = cat(t.cat);
     tile = catTile(c); title = esc(c ? c.name : 'Bez kategorie');
     var rs = t.type === 'expense' ? refundSum(t.id) : 0;
     sub = esc([ctx ? dShort(t.date) : '', t.note, ctx ? '' : (a && a.name)].filter(Boolean).join(' · '));
-    if (rs) sub = (sub ? sub + ' · ' : '') + '<span class="pos">vráceno ' + money(rs) + '</span>';
-    amt = t.type === 'expense' ? money(-t.amount) : money(t.amount, true);
+    if (rs) sub = (sub ? sub + ' · ' : '') + '<span class="pos">vráceno ' + moneyC(rs, accCur(a)) + '</span>';
+    amt = t.type === 'expense' ? moneyC(-t.amount, accCur(a)) : moneyC(t.amount, accCur(a), true);
     col = t.type === 'income' ? 'pos' : '';
   }
   return '<button class="row" onclick="App.editTx(\'' + t.id + '\')">' + tile + '<span class="main"><span class="t">' + title + '</span><span class="s">' + (sub || '&nbsp;') + '</span></span><span class="amt ' + col + '">' + amt + '</span></button>';
+}
+
+/* ---------- time series (native currency for one account, CZK for net worth) ---------- */
+function series(months, accId){
+  var t = today(), ev = [], curOf = {}, inSet = {};
+  S.accounts.forEach(function(a){ curOf[a.id] = accCur(a); });
+  (accId ? S.accounts.filter(function(a){ return a.id === accId; }) : S.accounts).forEach(function(a){ inSet[a.id] = 1; ev.push([a.start, +a.initial || 0, curOf[a.id]]); });
+  S.tx.forEach(function(x){
+    var v = +x.amount || 0;
+    function add(id, d){ if (inSet[id]) ev.push([x.date, d, curOf[id]]); }
+    if (x.type === 'expense') add(x.acc, -v);
+    else if (x.type === 'income' || x.type === 'reval' || x.type === 'refund') add(x.acc, v);
+    else if (x.type === 'transfer') { add(x.acc, -v); add(x.to, x.amount2 != null ? +x.amount2 : v); }
+  });
+  if (!accId) owedEvents().forEach(function(e){ ev.push([e[0], e[1], 'CZK']); });
+  ev.sort(function(a, b){ return a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0; });
+  var start = t;
+  ev.forEach(function(e){ if (e[0] < start) start = e[0]; });
+  if (months) { var dd = new Date(); dd.setMonth(dd.getMonth() - months); var sm = fmtD(dd); if (sm > start) start = sm; }
+  var days = daysBetween(start, t), dates = [], d, i;
+  if (days <= 92) { d = parseD(t); for (i = 0; i <= days; i++) { dates.push(fmtD(d)); d.setDate(d.getDate() - 1); } }
+  else if (days <= 750) { d = parseD(t); while (fmtD(d) > start) { dates.push(fmtD(d)); d.setDate(d.getDate() - 7); } dates.push(start); }
+  else { dates.push(t); var ym = addMonths(t.slice(0, 7), -1); while (monthEnd(ym) > start) { dates.push(monthEnd(ym)); ym = addMonths(ym, -1); } dates.push(start); }
+  dates.reverse();
+  var j = 0, sums = {};
+  var vals = dates.map(function(dt){
+    while (j < ev.length && ev[j][0] <= dt) { sums[ev[j][2]] = (sums[ev[j][2]] || 0) + ev[j][1]; j++; }
+    if (accId) return sums[curOf[accId]] || 0;
+    var tot = 0; for (var c in sums) tot += sums[c] * fxAt(c, dt); return tot;
+  });
+  return {dates:dates, vals:vals};
 }
 
 /* ---------- charts ---------- */
@@ -603,7 +720,7 @@ function lineChart(id, ser, opts){
   else { mn -= span * 0.08; mx += span * 0.08; }
   function X(i){ return P + (W - 2 * P) * i / (n - 1); }
   function Y(v){ return 6 + (H - 12) * (1 - (v - mn) / (mx - mn)); }
-  charts[id] = {dates:dates, vals:vals, X:X, Y:Y, W:W, P:P, n:n, mask:!!opts.mask};
+  charts[id] = {dates:dates, vals:vals, X:X, Y:Y, W:W, P:P, n:n, mask:!!opts.mask, cur:opts.cur || 'CZK'};
   var col = opts.plain ? 'var(--blue)' : 'var(--lime)', dot = opts.plain ? 'var(--surface)' : 'var(--card)';
   var line = 'M' + vals.map(function(v, i){ return X(i).toFixed(1) + ' ' + Y(v).toFixed(1); }).join('L');
   var area = line + 'L' + X(n - 1).toFixed(1) + ' ' + H + 'L' + X(0).toFixed(1) + ' ' + H + 'Z';
@@ -621,7 +738,7 @@ function bindCharts(root){
     function show(i){
       var x = c.X(i), y = c.Y(c.vals[i]);
       mk.setAttribute('cx', x); mk.setAttribute('cy', y); g.setAttribute('x1', x); g.setAttribute('x2', x); g.style.display = '';
-      if (ro) ro.innerHTML = dShort(c.dates[i]) + ' · ' + (c.mask && hidden() ? '•••••' : money(c.vals[i]));
+      if (ro) ro.innerHTML = dShort(c.dates[i]) + ' · ' + (c.mask && hidden() ? '•••••' : moneyC(c.vals[i], c.cur));
     }
     function move(e){
       var r = svg.getBoundingClientRect(), px = (e.clientX - r.left) / r.width * c.W;
@@ -642,7 +759,7 @@ function dayNet(ym){
   S.tx.forEach(function(t){
     if (t.type !== 'expense' && t.type !== 'refund') return;
     var d = statDate(t, pm); if (!d || d.slice(0, 7) !== ym) return;
-    arr[+d.slice(8, 10) - 1] += t.type === 'expense' ? +t.amount : -t.amount;
+    arr[+d.slice(8, 10) - 1] += t.type === 'expense' ? czk(t) : -czk(t);
   });
   return arr.map(function(v){ return Math.max(0, v); });
 }
@@ -711,7 +828,7 @@ function txListHtml(){
   items.forEach(function(t){ if (!cur || cur.d !== t.date) { cur = {d:t.date, items:[]}; groups.push(cur); } cur.items.push(t); });
   groups.forEach(function(g){
     var sum = 0;
-    g.items.forEach(function(t){ if (t.type === 'expense') sum -= t.amount; else if (t.type === 'income') sum += t.amount; else if (t.type === 'refund' && !(t.sub && t.due) && !refTx(t)) sum += t.amount; });
+    g.items.forEach(function(t){ if (t.type === 'expense') sum -= czk(t); else if (t.type === 'income') sum += czk(t); else if (t.type === 'refund' && !(t.sub && t.due) && !refTx(t)) sum += czk(t); });
     h += '<div class="dayhead"><span>' + dayHead(g.d) + '</span><span>' + (sum ? money(sum, true) : '') + '</span></div><div class="card">' + g.items.map(function(t){ return txRow(t); }).join('') + '</div>';
   });
   return h;
@@ -723,7 +840,7 @@ function monthStatsUpTo(ym, day){
   S.tx.forEach(function(t){
     var sdt = statDate(t, pm);
     if (!sdt || sdt.slice(0, 7) !== ym || +sdt.slice(8, 10) > day) return;
-    var v = +t.amount || 0, k = t.cat || 'none';
+    var v = czk(t), k = t.cat || 'none';
     if (t.type === 'expense') { m.exp += v; m.byCat[k] = (m.byCat[k] || 0) + v; }
     else if (t.type === 'refund') { m.exp -= v; m.byCat[k] = (m.byCat[k] || 0) - v; }
     else if (t.type === 'income') m.inc += v;
@@ -942,11 +1059,13 @@ function accRow(a, bal){
     var lv = lastVal(a); sub = (t.g === 'property' ? 'Odhad z ' : 'Hodnota z ') + dShort(lv);
     if (daysBetween(lv, today()) >= staleDays(t.g)) cls = 'warn';
   } else if (t.g === 'debt') sub = 'Zbývá splatit';
-  return '<button class="row" onclick="App.accDetail(\'' + a.id + '\')">' + accTile(a) + '<span class="main"><span class="t">' + esc(a.name) + '</span><span class="s ' + cls + '">' + esc(sub) + '</span></span><span class="amt b ' + (bal < 0 && !hidden() ? 'neg' : '') + '">' + hm(bal) + '</span></button>';
+  var c = accCur(a), sh = esc(sub);
+  if (c !== 'CZK') sh = hmC(bal, c) + ' · ' + sh;
+  return '<button class="row" onclick="App.accDetail(\'' + a.id + '\')">' + accTile(a) + '<span class="main"><span class="t">' + esc(a.name) + '</span><span class="s ' + cls + '">' + sh + '</span></span><span class="amt b ' + (bal < 0 && !hidden() ? 'neg' : '') + '">' + hm(c === 'CZK' ? bal : Math.round(bal * fxNow(c))) + '</span></button>';
 }
 function rangeChange(ser, hid){
   var n = ser.vals.length; if (n < 2) return '';
-  var a = ser.vals[0], z = ser.vals[n - 1], d = z - a;
+  var a = ser.vals[0], z = ser.vals[n - 1], d = Math.round(z - a);
   var lim = new Date(); lim.setMonth(lim.getMonth() - ui.range);
   var lbl = !ui.range || ser.dates[0] > fmtD(lim) ? 'Od ' + dShort(ser.dates[0]) : {3:'Za 3 měsíce', 12:'Za rok', 36:'Za 3 roky'}[ui.range];
   var pc = Math.abs(a) > 0 ? ' · ' + (d >= 0 ? '+' : '−') + (Math.abs(d) / Math.abs(a) * 100).toLocaleString('cs-CZ', {maximumFractionDigits:1}) + '\u00a0%' : '';
@@ -960,15 +1079,20 @@ function eyePill(accId){
 function vAssets(){
   if (!S.accounts.length) return hdr('Majetek') + vEmptyBody();
   var b = balances(), g = {liquid:0, invest:0, crypto:0, receivable:0, property:0, debt:0};
-  S.accounts.forEach(function(a){ g[tinfo(a).g] += b[a.id]; });
+  S.accounts.forEach(function(a){ g[tinfo(a).g] += b[a.id] * fxNow(accCur(a)); });
   var owedNow = owedAt(today()); g.receivable += owedNow;
+  Object.keys(g).forEach(function(k){ g[k] = Math.round(g[k] * 100) / 100; });
   var assets = g.liquid + g.invest + g.crypto + g.receivable + g.property, nw = assets + g.debt, hid = hidden();
-  var delta = nw - netWorth(monthEnd(addMonths(curYM(), -1)));
+  var delta = Math.round(nw - netWorth(monthEnd(addMonths(curYM(), -1))));
+  if (usedCurs().length) nw = Math.round(nw);
   var ranges = [[3,'3 měs.'],[12,'Rok'],[36,'3 roky'],[0,'Vše']], ser = series(ui.range);
   var h = hdr('Majetek', eyePill()) +
     '<section class="hcard"><div style="display:flex;justify-content:space-between;gap:8px"><div class="lbl">Čisté jmění</div><div class="ro" id="nw-ro"></div></div>' +
     '<div class="big">' + (hid ? '<span class="masked">•••••</span> <span class="cur">' + esc(S.currency) + '</span>' : bigMoney(nw)) + '</div>' +
     '<div class="line" style="display:flex;gap:8px;align-items:center;margin-top:8px"><span class="' + (hid || delta >= 0 ? 'chip-lime' : 'chip-down') + '">' + (hid ? '•••••' : money(delta, true)) + '</span>tento měsíc</div>' +
+    '<div class="row3 split"><div><div class="k">Aktiva</div><div class="v">' + hm(Math.round(assets - g.receivable)) + '</div></div>' +
+    '<div><div class="k">Pohledávky</div><div class="v">' + hm(Math.round(g.receivable)) + '</div></div>' +
+    '<div><div class="k">Závazky</div><div class="v"' + (!hid && g.debt < 0 ? ' style="color:#FFB38A"' : '') + '>' + hm(Math.round(g.debt)) + '</div></div></div>' +
     lineChart('nw', ser, {mask:true}) + rangeChange(ser, hid) +
     '<div class="dseg">' + ranges.map(function(r){ return '<button class="' + (ui.range === r[0] ? 'on' : '') + '" aria-pressed="' + (ui.range === r[0]) + '" onclick="App.setRange(' + r[0] + ')">' + r[1] + '</button>'; }).join('') + '</div></section>';
   var stale = null;
@@ -982,7 +1106,7 @@ function vAssets(){
     var k = gr[0], list = S.accounts.filter(function(a){ return tinfo(a).g === k; });
     var virt = k === 'receivable' && Math.abs(owedNow) > 0.004;
     if (!list.length && !virt) return;
-    list.sort(function(x, y){ return Math.abs(b[y.id]) - Math.abs(b[x.id]); });
+    list.sort(function(x, y){ return Math.abs(b[y.id] * fxNow(accCur(y))) - Math.abs(b[x.id] * fxNow(accCur(x))); });
     var share = assets > 0 ? Math.abs(g[k]) / assets : 0;
     h += '<div class="ghead"><div class="l1"><h2>' + gr[1] + '</h2><span class="tot">' + hm(g[k]) + '</span></div>' +
       '<div class="l2"><span class="bar"><i style="width:' + Math.min(100, share * 100).toFixed(1) + '%;background:' + tint(GCOL[k]).fg + '"></i></span><span class="pc">' + pct(share) + ' aktiv</span></div></div>' +
@@ -996,8 +1120,9 @@ function accDetail(id){
   var t = tinfo(a), bal = balances()[id], hid = hidden();
   var items = S.tx.filter(function(x){ return x.acc === id || x.to === id; }).sort(sortTx);
   openSheet('<div data-wealth="1"></div><div class="shead"><h3>' + accTile(a) + '<span class="nm">' + esc(a.name) + '</span></h3>' + (eyePill(id) || '<button class="iconbtn" onclick="App.closeSheet()" aria-label="Zavřít">' + ic('x', 22, 2) + '</button>') + '</div>' +
-    '<div class="sub">' + esc(t.n) + '</div><div class="bigv ' + (bal < 0 && !hid ? 'neg' : '') + '">' + hm(bal) + '</div>' +
-    (hid ? '' : '<div class="chartbox"><div class="ro" id="acc_' + id + '-ro"></div>' + lineChart('acc_' + id, series(0, id), {plain:true}) + '</div>') +
+    '<div class="sub">' + esc(t.n) + '</div><div class="bigv ' + (bal < 0 && !hid ? 'neg' : '') + '">' + hmC(bal, accCur(a)) + '</div>' +
+    (accCur(a) !== 'CZK' ? '<div class="sub">' + (hid ? '' : '≈ ' + money(Math.round(bal * fxNow(accCur(a)))) + ' · ') + '1\u00a0' + esc(curSym(accCur(a))) + ' = ' + fmtRate(fxNow(accCur(a))) + '\u00a0' + esc(S.currency) + '</div>' : '') +
+    (hid ? '' : '<div class="chartbox"><div class="ro" id="acc_' + id + '-ro"></div>' + lineChart('acc_' + id, series(0, id), {plain:true, cur:accCur(a)}) + '</div>') +
     '<div class="btnrow"><button class="btn" onclick="App.updateValue(\'' + id + '\')">' + valueLabel(a) + '</button><button class="btn ghost" onclick="App.accForm(\'' + id + '\')">Upravit</button></div>' +
     '<div class="sh"><h2>Pohyby</h2></div>' + (items.length ? '<div class="card">' + items.slice(0, 40).map(function(x){ return txRow(x, id); }).join('') + '</div>' +
       (items.length > 40 ? '<p class="hint center" style="margin-top:8px">Zobrazeno posledních 40 z ' + items.length + '.</p>' : '') : '<div class="empty">Žádné pohyby</div>'),
@@ -1019,7 +1144,10 @@ function accForm(id){
     '<label class="field"><span>Druh</span><select class="inp" name="type" onchange="App.accTypeChange(this.value)">' +
       Object.keys(TYPES).map(function(k){ return '<option value="' + k + '"' + (k === type ? ' selected' : '') + '>' + TYPES[k].n + '</option>'; }).join('') + '</select></label>' +
     '<p class="hint" id="typeHint">' + typeHint(type) + '</p>' +
-    '<label class="field"><span id="initLabel">' + initLabel(type) + '</span><input class="inp" name="initial" inputmode="decimal" placeholder="0" value="' + (init === '' ? '' : esc(String(init).replace('.', ','))) + '"></label>' +
+    '<label class="field"><span>Měna účtu</span><select class="inp" name="cur" onchange="App.accCurChange(this.value)">' +
+      Object.keys(CURS).map(function(k){ return '<option value="' + k + '"' + (k === accCur(a) ? ' selected' : '') + '>' + CURS[k][1] + ' (' + (k === 'CZK' ? esc(S.currency) : CURS[k][0]) + ')</option>'; }).join('') + '</select></label>' +
+    '<p class="hint" id="curHint"' + (accCur(a) === 'CZK' ? ' style="display:none"' : '') + '>Zůstatek a pohyby se vedou v měně účtu, v přehledech se přepočítají na koruny podle aktuálního kurzu.</p>' +
+    '<label class="field"><span id="initLabel">' + initLabel(type) + ' (' + esc(curSym(accCur(a))) + ')</span><input class="inp" name="initial" inputmode="decimal" placeholder="0" value="' + (init === '' ? '' : esc(String(init).replace('.', ','))) + '"></label>' +
     '<label class="field"><span>Ke dni</span><input class="inp" type="date" name="start" required value="' + (a ? a.start : today()) + '"></label>' +
     '<p class="hint">Zůstatek k tomuto dni zahrnuje všechny dřívější pohyby. Zapisují se jen pohyby od tohoto dne.</p>' +
     '<button class="btn" type="submit">' + (a ? 'Uložit' : 'Přidat účet') + '</button>' +
@@ -1027,6 +1155,11 @@ function accForm(id){
     '</form>', function(){
       if (!a) setTimeout(function(){ var i = document.querySelector('#accf [name=nm]'); if (i) i.focus(); }, 60);
     });
+}
+function accCurChange(v){
+  var h = document.getElementById('curHint'); if (h) h.style.display = v === 'CZK' ? 'none' : '';
+  var f = document.getElementById('accf'), l = document.getElementById('initLabel');
+  if (f && l) l.textContent = initLabel(f.elements.type.value) + ' (' + curSym(v) + ')';
 }
 function updateValue(id){
   var a = acc(id); if (!a) return;
@@ -1038,8 +1171,8 @@ function updateValue(id){
     : 'Aktuální tržní hodnota. Rozdíl se zapíše jako zhodnocení nebo ztráta.';
   openSheet('<form id="valf" onsubmit="App.saveValue(event,\'' + id + '\')" autocomplete="off">' +
     '<div class="shead"><h3>' + valueLabel(a) + '</h3><button type="button" class="iconbtn" onclick="App.closeSheet()" aria-label="Zavřít">' + ic('x', 22, 2) + '</button></div>' +
-    '<div class="sub">' + esc(a.name) + (hid ? '' : ' · nyní ' + money(cur)) + '</div><p class="hint" style="margin:8px 4px 0">' + expl + '</p>' +
-    '<label class="field"><span>Nová hodnota (' + esc(S.currency) + ')</span><input class="inp disp" style="font-size:28px;font-weight:700;text-align:center" name="val" inputmode="decimal" placeholder="0" value="' + (hid ? '' : esc(String(Math.round(cur * 100) / 100).replace('.', ','))) + '"></label>' +
+    '<div class="sub">' + esc(a.name) + (hid ? '' : ' · nyní ' + moneyC(cur, accCur(a))) + '</div><p class="hint" style="margin:8px 4px 0">' + expl + '</p>' +
+    '<label class="field"><span>Nová hodnota (' + esc(curSym(accCur(a))) + ')</span><input class="inp disp" style="font-size:28px;font-weight:700;text-align:center" name="val" inputmode="decimal" placeholder="0" value="' + (hid ? '' : esc(String(Math.round(cur * 100) / 100).replace('.', ','))) + '"></label>' +
     '<label class="field"><span>Ke dni</span><input class="inp" type="date" name="date" required value="' + today() + '"></label>' +
     '<label class="field"><span>Poznámka</span><input class="inp" name="note" value="' + (g === 'liquid' ? 'Srovnání zůstatku' : g === 'debt' ? 'Aktualizace dluhu' : g === 'receivable' ? 'Úprava pohledávky' : 'Přecenění') + '"></label>' +
     '<button class="btn" type="submit">Uložit hodnotu</button><button class="btn ghost" type="button" onclick="App.accDetail(\'' + id + '\')">Zpět</button></form>',
@@ -1052,6 +1185,16 @@ function catEditor(kind, title){
     return '<span class="tag">' + catTile(c, 'sm') + esc(c.name) + '<button class="x" onclick="App.delCat(\'' + kind + '\',\'' + c.id + '\')" aria-label="Smazat kategorii ' + esc(c.name) + '">×</button></span>';
   }).join('') + '</div><div class="addrow"><input id="ci-' + kind + '" class="inp emo" placeholder="🙂" maxlength="8" aria-label="Ikona kategorie"><input id="cn-' + kind + '" class="inp" placeholder="Nová kategorie" aria-label="Název kategorie"><button class="btn sm" onclick="App.addCat(\'' + kind + '\')">Přidat</button></div></div>';
 }
+function fxSection(){
+  var used = usedCurs(), f = S.fx || {};
+  var h = '<div class="sh"><h2>Kurzy měn</h2></div><div class="pad">';
+  if (!used.length) return h + '<p class="hint">Účet v cizí měně se nastavuje v úpravě účtu. Kurzy se pak stahují automaticky.</p></div>';
+  h += '<div class="card" style="margin:0">' + used.map(function(c){
+    return '<div class="row"><span class="main"><span class="t">1 ' + esc(curSym(c)) + ' (' + c + ')</span></span><input class="inp" style="width:120px;text-align:right" inputmode="decimal" value="' + fmtRate(fxNow(c)) + '" onchange="App.setRate(\'' + c + '\',this.value)" aria-label="Kurz ' + c + '"><span class="mute">' + esc(S.currency) + '</span></div>';
+  }).join('') + '</div>';
+  h += '<p class="hint" style="margin-top:8px">' + (f.date ? 'Kurzy z ' + dShort(f.date) + (f.src ? ' (' + esc(f.src) + ')' : '') + '. ' : 'Kurzy zatím nestaženy, použity orientační hodnoty. ') + 'S připojením k internetu se aktualizují automaticky. Kurz lze přepsat ručně.</p>';
+  return h + '<button class="btn ghost" onclick="App.fetchRates(true)">Aktualizovat kurzy</button></div>';
+}
 function vSettings(){
   return hdr('Nastavení', '', true) +
     '<div class="setcard"><div class="disp" style="font-size:18px;font-weight:700;margin-bottom:6px">Záloha</div>' +
@@ -1062,6 +1205,7 @@ function vSettings(){
     '<p class="hint">Hodnota majetku se zobrazuje jen v záložce Majetek. Při zapnutém skrývání je vidět až po klepnutí na Zobrazit a po odchodu ze záložky se znovu skryje.</p></div>' +
     '<div class="sh"><h2>Zadávání</h2></div><div class="pad"><label class="toggle"><input type="checkbox"' + (S.nativeKeys ? ' checked' : '') + ' onchange="App.setNativeKeys(this.checked)"><span>Systémová klávesnice pro částku</span></label>' +
     '<p class="hint">Místo vlastní číselné klávesnice se při zadávání pohybu použije klávesnice telefonu.</p></div>' +
+    fxSection() +
     '<div class="sh"><h2>Měna</h2></div><div class="pad"><input class="inp" value="' + esc(S.currency) + '" maxlength="5" onchange="App.setCurrency(this.value)" aria-label="Označení měny"></div>' +
     catEditor('expense', 'Kategorie výdajů') + catEditor('income', 'Kategorie příjmů') +
     '<div class="sh"><h2>Ostatní</h2></div><div class="pad stack"><button class="btn ghost" onclick="App.loadSample()">Načíst ukázková data</button><button class="btn danger" onclick="App.wipe()">Smazat všechna data</button></div>' +
@@ -1070,7 +1214,7 @@ function vSettings(){
 
 /* ---------- render ---------- */
 function render(){
-  charts = {};
+  charts = {}; fxCache = {};
   DARK = !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
   var v = ui.view;
   document.querySelectorAll('nav.tabs button[data-v]').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-v') === v); });
@@ -1116,12 +1260,12 @@ function prettyAmt(a){
 function amtHtml(d){
   var v = parseAmt(d.amount), nz = isFinite(v) && v !== 0;
   var sign = !nz ? '' : d.type === 'expense' ? '−' : (d.type === 'income' || d.type === 'refund') ? '+' : '';
-  return sign + prettyAmt(d.amount) + '<span class="k">' + esc(S.currency) + '</span>';
+  return sign + prettyAmt(d.amount) + '<span class="k">' + esc(curSym(accCur(acc(d.acc)))) + '</span>';
 }
 function amtColor(d){ return (d.type === 'income' || d.type === 'refund') ? 'var(--green)' : 'var(--ink)'; }
 function ctaText(d){
   var v = parseAmt(d.amount);
-  return (d.id ? 'Uložit' : CTA[d.type]) + (isFinite(v) && v !== 0 ? ' · ' + prettyAmt(d.amount) + '\u00a0' + S.currency : '');
+  return (d.id ? 'Uložit' : CTA[d.type]) + (isFinite(v) && v !== 0 ? ' · ' + prettyAmt(d.amount) + '\u00a0' + curSym(accCur(acc(d.acc))) : '');
 }
 function catsSorted(kind){
   var list = kind === 'income' ? S.cats.income : S.cats.expense, cnt = {}, lim = fmtD(new Date(Date.now() - 180 * 864e5));
@@ -1140,7 +1284,7 @@ function txSheet(){
   if (!isR) h += '<div class="tgrid" role="group" aria-label="Druh pohybu">' + [['expense','Výdaj'],['income','Příjem'],['transfer','Převod'],['refund','Vratka']].map(function(x){
     return '<button class="' + (d.type === x[0] ? 'on' : '') + '" aria-pressed="' + (d.type === x[0]) + '" onclick="App.setTxType(\'' + x[0] + '\')">' + x[1] + '</button>';
   }).join('') + '</div>';
-  if (S.nativeKeys) h += '<div class="amtbig" style="color:' + amtColor(d) + '"><input id="amtIn" class="amtin" inputmode="decimal" autocomplete="off" placeholder="0" style="width:' + (Math.max(1, String(d.amount || '').length) + 0.5) + 'ch" value="' + esc(d.amount) + '" oninput="App.amtIn(this)" aria-label="Částka"><span class="k">' + esc(S.currency) + '</span></div>';
+  if (S.nativeKeys) h += '<div class="amtbig" style="color:' + amtColor(d) + '"><input id="amtIn" class="amtin" inputmode="decimal" autocomplete="off" placeholder="0" style="width:' + (Math.max(1, String(d.amount || '').length) + 0.5) + 'ch" value="' + esc(d.amount) + '" oninput="App.amtIn(this)" aria-label="Částka"><span class="k">' + esc(curSym(accCur(A))) + '</span></div>';
   else h += '<div class="amtbig" id="amtBig" style="color:' + amtColor(d) + '">' + amtHtml(d) + '</div>';
   if (hint) h += '<div class="amthint">' + hint + '</div>';
   h += '<div class="pchips">';
@@ -1154,6 +1298,7 @@ function txSheet(){
     h += '<div class="xfer"><button class="abox" onclick="App.accPick(\'acc\')"><span class="k">Z účtu' + (A ? ' · ' + esc(tinfo(A).s) : '') + '</span><span class="v">' + esc(A ? A.name : '') + '</span></button>' +
       '<span class="mute">' + ic('chevR', 18, 2) + '</span>' +
       '<button class="abox" onclick="App.accPick(\'to\')"><span class="k">Na účet' + (T ? ' · ' + esc(tinfo(T).s) : '') + '</span><span class="v">' + esc(T ? T.name : '') + '</span></button></div>';
+    if (A && T && accCur(A) !== accCur(T)) h += '<label class="xamt"><span>Připsáno</span><input class="inp" id="amt2" inputmode="decimal" placeholder="' + esc(conv2(d)) + '" value="' + esc(d.amount2 || '') + '" oninput="App.txSet(\'amount2\',this.value)"><b>' + esc(curSym(accCur(T))) + '</b></label>';
   }
   if (cats.length) h += '<div class="cgrid" id="cats">' + cats.map(function(c){
     var st = catStyle(c), t = tint(st.col);
@@ -1161,7 +1306,7 @@ function txSheet(){
   }).join('') + '</div>';
   if (d.type === 'refund' && !d.sub) {
     var rx = d.ref ? refTx(d) : null;
-    h += rx ? '<div class="reflink">' + catTile(cat(rx.cat), 'sm') + '<button class="main" onclick="App.refPick()"><span class="k">K nákupu</span><span class="v">' + esc((rx.note || (cat(rx.cat) || {}).name || 'Nákup') + ' · ' + dateLbl(rx.date) + ' · ' + money(-rx.amount)) + '</span></button><button class="x" onclick="App.refClear()" aria-label="Zrušit párování">' + ic('x', 18, 2) + '</button></div>'
+    h += rx ? '<div class="reflink">' + catTile(cat(rx.cat), 'sm') + '<button class="main" onclick="App.refPick()"><span class="k">K nákupu</span><span class="v">' + esc((rx.note || (cat(rx.cat) || {}).name || 'Nákup') + ' · ' + dateLbl(rx.date)) + ' · ' + moneyC(-rx.amount, accCur(acc(rx.acc))) + '</span></button><button class="x" onclick="App.refClear()" aria-label="Zrušit párování">' + ic('x', 18, 2) + '</button></div>'
       : '<button class="reflink add" onclick="App.refPick()">' + ic('undo', 18) + '<span>Spárovat s nákupem</span>' + ic('chevR', 16, 2) + '</button>';
   }
   if (d.noteOpen || d.note) h += '<input class="inp notein" id="noteIn" placeholder="Poznámka" value="' + esc(d.note || '') + '" oninput="App.txSet(\'note\',this.value)">';
@@ -1214,6 +1359,7 @@ function amtIn(el){
   el.style.width = (Math.max(1, v.length) + 0.5) + 'ch';
   draft.amount = v;
   var c = document.getElementById('cta'); if (c) c.textContent = ctaText(draft);
+  var x2 = document.getElementById('amt2'); if (x2) x2.placeholder = conv2(draft);
 }
 function accPick(field){
   readDraft();
@@ -1250,7 +1396,7 @@ function refListHtml(q){
   if (!items.length) return '<div class="empty">Nic nenalezeno</div>';
   return '<div class="card">' + items.map(function(t){
     var c = cat(t.cat), a = acc(t.acc), rs = refundSum(t.id);
-    return '<button class="row" onclick="App.refSet(\'' + t.id + '\')">' + catTile(c) + '<span class="main"><span class="t">' + esc(t.note || (c ? c.name : 'Nákup')) + '</span><span class="s">' + esc([dShort(t.date), c && t.note ? c.name : '', a && a.name].filter(Boolean).join(' · ')) + (rs ? ' · <span class="pos">vráceno ' + money(rs) + '</span>' : '') + '</span></span><span class="amt">' + money(-t.amount) + '</span></button>';
+    return '<button class="row" onclick="App.refSet(\'' + t.id + '\')">' + catTile(c) + '<span class="main"><span class="t">' + esc(t.note || (c ? c.name : 'Nákup')) + '</span><span class="s">' + esc([dShort(t.date), c && t.note ? c.name : '', a && a.name].filter(Boolean).join(' · ')) + (rs ? ' · <span class="pos">vráceno ' + money(rs) + '</span>' : '') + '</span></span><span class="amt">' + moneyC(-t.amount, accCur(a)) + '</span></button>';
   }).join('') + '</div>';
 }
 function refFilter(q){ var el = document.getElementById('refList'); if (el) el.innerHTML = refListHtml(q); }
@@ -1261,7 +1407,12 @@ function refSet(id){
 }
 function refClear(){ readDraft(); draft.ref = ''; draft.noFocus = true; txSheet(); }
 function refBack(){ draft.noFocus = true; txSheet(); }
+function conv2(d){
+  var A = acc(d.acc), T = acc(d.to), v = parseAmt(d.amount); if (!A || !T || !isFinite(v)) return '0';
+  return String(Math.round(v * fxAt(accCur(A), d.date) / fxAt(accCur(T), d.date) * 100) / 100).replace('.', ',');
+}
 function updAmt(){
+  var x2 = document.getElementById('amt2'); if (x2 && draft) x2.placeholder = conv2(draft);
   var e = document.getElementById('amtBig'); if (e) { e.innerHTML = amtHtml(draft); e.style.color = amtColor(draft); }
   var c = document.getElementById('cta'); if (c) c.textContent = ctaText(draft);
 }
@@ -1392,13 +1543,13 @@ function balances(upTo){
     var v = +t.amount || 0;
     if (t.type === 'expense') { if (t.acc in b) b[t.acc] -= v; }
     else if (t.type === 'income' || t.type === 'reval' || t.type === 'refund') { if (t.acc in b) b[t.acc] += v; }
-    else if (t.type === 'transfer') { if (t.acc in b) b[t.acc] -= v; if (t.to in b) b[t.to] += v; }
+    else if (t.type === 'transfer') { if (t.acc in b) b[t.acc] -= v; if (t.to in b) b[t.to] += (t.amount2 != null ? +t.amount2 : v); }
   });
   return b;
 }
 function netWorth(upTo){
   var b = balances(upTo), s = 0;
-  for (var k in b) s += b[k];
+  for (var k in b) s += b[k] * fxAt(accCur(acc(k)), upTo || today());
   return s + owedAt(upTo || today());
 }
 /* Shares from other people (refunds linked to a recurring payment) count in the month of
@@ -1419,7 +1570,7 @@ function monthStats(ym){
   S.tx.forEach(function(t){
     var sdt = statDate(t, pm);
     if (!sdt || sdt.slice(0,7) !== ym) return;
-    var v = +t.amount || 0, k = t.cat || 'none';
+    var v = czk(t), k = t.cat || 'none';
     if (t.type === 'expense') { m.exp += v; m.byCat[k] = (m.byCat[k] || 0) + v; }
     else if (t.type === 'refund') { m.exp -= v; m.byCat[k] = (m.byCat[k] || 0) - v; }
     else if (t.type === 'income') { m.inc += v; m.byInc[k] = (m.byInc[k] || 0) + v; }
@@ -1428,7 +1579,7 @@ function monthStats(ym){
   return m;
 }
 /* Time series of net worth (or one account's balance) */
-function series(months, accId){
+function seriesOld(months, accId){
   var ev = [], t = today();
   var accs = accId ? S.accounts.filter(function(a){ return a.id === accId; }) : S.accounts;
   accs.forEach(function(a){ ev.push([a.start, +a.initial || 0]); });
@@ -1689,6 +1840,9 @@ function saveTx(e){
   if ((d.type === 'expense' || d.type === 'income' || d.type === 'refund') && !d.cat) { toast('Chybí kategorie.'); return; }
   if (d.type === 'transfer' && (!d.to || d.to === d.acc)) { toast('Převod musí jít mezi dvěma různými účty.'); return; }
   var t = {id:d.id || uid(), date:d.date, type:d.type, amount:Math.round(amt*100)/100, acc:d.acc, note:(d.note || '').trim()};
+  var ca = accCur(acc(t.acc));
+  if (ca !== 'CZK') t.rate = fxAt(ca, t.date);
+  if (d.type === 'transfer') { var cb = accCur(acc(d.to)); if (cb !== ca) { var a2 = parseAmt(d.amount2); t.amount2 = isFinite(a2) && a2 > 0 ? Math.round(a2 * 100) / 100 : Math.round(t.amount * fxAt(ca, t.date) / fxAt(cb, t.date) * 100) / 100; } }
   if (d.type === 'transfer') t.to = d.to;
   if (d.type === 'expense' || d.type === 'income' || d.type === 'refund') t.cat = d.cat;
   if (d.sub) { t.sub = d.sub; t.due = d.due; if (d.member) t.member = d.member; }
@@ -1720,8 +1874,10 @@ function saveAcc(e, id){
   if (!isFinite(init)) init = 0;
   if (type === 'debt') init = -Math.abs(init);
   var start = f.start.value || today();
-  if (id) { var a = acc(id); a.name = name; a.type = type; a.initial = init; a.start = start; }
-  else S.accounts.push({id:uid(), name:name, type:type, initial:init, start:start});
+  var cur = f.cur ? f.cur.value : 'CZK';
+  if (id) { var a = acc(id); a.name = name; a.type = type; a.initial = init; a.start = start; a.cur = cur; }
+  else S.accounts.push({id:uid(), name:name, type:type, initial:init, start:start, cur:cur});
+  if (cur !== 'CZK') setTimeout(function(){ fetchRates(false); }, 50);
   save(); closeSheet(); render();
   toast(id ? 'Účet upraven' : 'Účet přidán');
 }
@@ -1747,7 +1903,7 @@ function saveValue(e, id){
   if (Math.abs(delta) < 0.005) { toast('Hodnota se nezměnila.'); accDetail(id); return; }
   S.tx.push({id:uid(), date:date, type:'reval', amount:delta, acc:id, note:f.note.value.trim()});
   save(); render(); accDetail(id);
-  toast('Uloženo: ' + (delta > 0 ? '+' : '−') + NF.format(Math.abs(delta)) + ' ' + S.currency);
+  toast('Uloženo: ' + (delta > 0 ? '+' : '−') + NF.format(Math.abs(delta)) + ' ' + curSym(accCur(a)));
 }
 
 
@@ -1804,12 +1960,12 @@ function importFile(input){
 function exportCSV(){
   var TN = {expense:'Výdaj', income:'Příjem', transfer:'Převod', reval:'Změna hodnoty', refund:'Vratka'};
   var q = function(s){ s = String(s == null ? '' : s); return /[;"\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s; };
-  var rows = [['Datum','Typ','Částka','Účet','Na účet','Kategorie','Poznámka','K nákupu']];
+  var rows = [['Datum','Typ','Částka','Měna','Účet','Na účet','Kategorie','Poznámka','K nákupu','Připsáno']];
   S.tx.slice().sort(sortTx).reverse().forEach(function(t){
     var a = acc(t.acc), b = acc(t.to), c = cat(t.cat);
     var sign = t.type === 'expense' ? -t.amount : t.amount;
     var rx = t.ref ? S.tx.filter(function(z){ return z.id === t.ref; })[0] : null;
-    rows.push([t.date, TN[t.type] || t.type, String(sign).replace('.', ','), a ? a.name : '', b ? b.name : '', c ? c.name : '', t.note || '', rx ? rx.date + ' ' + (rx.note || '') + ' ' + rx.amount : '']);
+    rows.push([t.date, TN[t.type] || t.type, String(sign).replace('.', ','), accCur(a), a ? a.name : '', b ? b.name : '', c ? c.name : '', t.note || '', rx ? rx.date + ' ' + (rx.note || '') + ' ' + rx.amount : '', t.amount2 != null ? String(t.amount2).replace('.', ',') + ' ' + accCur(b) : '']);
   });
   download('finance-pohyby-' + today() + '.csv', '\ufeff' + rows.map(function(r){ return r.map(q).join(';'); }).join('\r\n'), 'text/csv');
 }
@@ -1844,7 +2000,8 @@ function sampleData(){
   var bank = A('Běžný účet','bank',38000), cash = A('Peněženka','cash',2500), sav = A('Spořicí účet','savings',90000),
       etf = A('ETF portfolio','invest',210000), btc = A('Bitcoin','crypto',25000), pen = A('Penzijní spoření','pension',64000),
       car = A('Auto','property',280000), loan = A('Úvěr na auto','debt',-190000),
-      eth = A('Ethereum','crypto',8000), rec = A('Půjčka Tomášovi','receivable',0);
+      eth = A('Kryptopeněženka','crypto',320), rec = A('Půjčka Tomášovi','receivable',0);
+  s.accounts.filter(function(a){ return a.id === eth; })[0].cur = 'EUR';
   function E(n){ return s.cats.expense.filter(function(c){ return c.name === n; })[0].id; }
   function I(n){ return s.cats.income.filter(function(c){ return c.name === n; })[0].id; }
   function r(a, b){ return a + Math.random()*(b-a); }
@@ -1885,7 +2042,7 @@ function sampleData(){
     var cb = btcV * r(-0.14, 0.18); tx(D(dim),'reval',cb,btc,{note:'Přecenění'}); if (D(dim) <= t) btcV += cb;
     if (m === 8) tx(D(14),'transfer',25000,bank,{to:rec, note:'Půjčil jsem Tomášovi na opravu auta'});
     if (m >= 10 && m <= 12) tx(D(16),'transfer',3000,rec,{to:bank, note:'Tomáš vrátil splátku'});
-    tx(D(dim),'reval',r(-900,1200),eth,{note:'Přecenění'});
+    tx(D(dim),'reval',r(-35,45),eth,{note:'Přecenění'});
     tx(D(dim),'reval',r(700,1100),pen,{note:'Vklad, státní příspěvek a zhodnocení'});
     tx(D(dim),'reval',-2300,car,{note:'Odhad poklesu hodnoty'});
   }
@@ -1929,7 +2086,7 @@ window.App = {tab:tab, addTx:addTx, editTx:editTx, setTxType:setTxType, pickCat:
   addCat:addCat, delCat:delCat, loadSample:loadSample, wipe:wipe,
   subForm:subForm, subDetail:subDetail, myPay:myPay, memberPay:memberPay, owedSheet:owedSheet, owedPay:owedPay, owedPayAll:owedPayAll, owedAll:owedAll,
   subCalc:subCalc, subAddMember:subAddMember, subDelMember:subDelMember, subSplit:subSplit, saveSub:saveSub, delSub:delSub, subIc:subIc,
-  amtIn:amtIn, refPick:refPick, refFilter:refFilter, refSet:refSet, refClear:refClear, refBack:refBack, setNativeKeys:setNativeKeys, accPick:accPick, accSet:accSet};
+  amtIn:amtIn, refPick:refPick, refFilter:refFilter, refSet:refSet, refClear:refClear, refBack:refBack, setNativeKeys:setNativeKeys, accPick:accPick, accSet:accSet, fetchRates:fetchRates, setRate:setRate, accCurChange:accCurChange};
 
 testStorage();
 S = load();
@@ -1954,6 +2111,7 @@ document.addEventListener('visibilitychange', function(){
     if (ui.view === 'assets') render();
     return;
   }
+  fetchRates(false);
   var n = processAuto();
   if (n) { save(); render(); toast(zap(n,'pravidelná platba','pravidelné platby','pravidelných plateb')); }
 });
@@ -1963,6 +2121,7 @@ try {
   if (mq.addEventListener) mq.addEventListener('change', onTheme); else if (mq.addListener) mq.addListener(onTheme);
 } catch(e) {}
 window.addEventListener('resize', function(){ if (!$('#sheetWrap').hidden) fitCats(); });
+setTimeout(function(){ fetchRates(false); }, 400);
 var autoN = processAuto();
 if (autoN) save();
 render();

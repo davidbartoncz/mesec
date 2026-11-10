@@ -365,6 +365,12 @@ button.abox{appearance:none;font:inherit;color:inherit}
 .hcard .row3.split{margin-top:14px}
 .hcard .row3.split .v{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
+.placein{display:flex;align-items:center;gap:8px;margin-top:12px;background:var(--surface);border:1px solid var(--line2);border-radius:14px;padding:0 12px;color:var(--muted);flex:none}
+.placein input{flex:1;min-width:0;border:0;background:transparent;font:inherit;font-size:16px;padding:12px 0;color:var(--ink);outline:none}
+.psug{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:8px -16px 0;padding:0 16px;flex:none}
+.psug:empty{display:none}
+.psug::-webkit-scrollbar{display:none}
+
 </style>
 </head>
 <body>
@@ -462,7 +468,8 @@ var ICONS = {
   cal:'M3 5h18v16H3zM3 10h18M8 3v4M16 3v4M9 15.5l2 2 4-4',
   assets:'M3 6h18v14H3zM3 10.5h18M15.5 15h2.5M6 6l9-3 1 3',
   download:'M12 4v11M7 10l5 5 5-5M5 20h14',
-  check:'M5 12.5l4.5 4.5L19 7'
+  check:'M5 12.5l4.5 4.5L19 7',
+  pin:'M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21zM12 7a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z'
 };
 
 var CURS = {CZK:['Kč','Česká koruna'], EUR:['€','Euro'], USD:['$','Americký dolar'], GBP:['£','Britská libra'], CHF:['CHF','Švýcarský frank'], PLN:['zł','Polský zlotý'], HUF:['Ft','Maďarský forint'], SEK:['kr','Švédská koruna'], NOK:['kr','Norská koruna'], DKK:['kr','Dánská koruna'], JPY:['¥','Japonský jen'], CAD:['C$','Kanadský dolar'], AUD:['A$','Australský dolar']};
@@ -661,14 +668,14 @@ function txRow(t, ctx){
     if (t.sub && t.due && !myTx(t.sub, t.due)) extra = 'podíl předem';
     if (rx) extra = 'k nákupu ' + dateLbl(rx.date);
     tile = tileHtml(catStyle(c).col, ic('undo'));
-    title = 'Vratka · ' + esc(sx ? sx.name : rx ? (rx.note || (cat(rx.cat) || {}).name || 'nákup') : (c ? c.name : ''));
-    sub = esc([ctx ? dShort(t.date) : '', extra, t.note, ctx ? '' : (a && a.name)].filter(Boolean).join(' · '));
+    title = 'Vratka · ' + esc(sx ? sx.name : rx ? (rx.place || rx.note || (cat(rx.cat) || {}).name || 'nákup') : (c ? c.name : ''));
+    sub = esc([ctx ? dShort(t.date) : '', extra, t.place, t.note, ctx ? '' : (a && a.name)].filter(Boolean).join(' · '));
     amt = moneyC(t.amount, accCur(a), true); col = 'pos';
   } else {
     c = cat(t.cat);
     tile = catTile(c); title = esc(c ? c.name : 'Bez kategorie');
     var rs = t.type === 'expense' ? refundSum(t.id) : 0;
-    sub = esc([ctx ? dShort(t.date) : '', t.note, ctx ? '' : (a && a.name)].filter(Boolean).join(' · '));
+    sub = esc([ctx ? dShort(t.date) : '', t.place, t.note, ctx ? '' : (a && a.name)].filter(Boolean).join(' · '));
     if (rs) sub = (sub ? sub + ' · ' : '') + '<span class="pos">vráceno ' + moneyC(rs, accCur(a)) + '</span>';
     amt = t.type === 'expense' ? moneyC(-t.amount, accCur(a)) : moneyC(t.amount, accCur(a), true);
     col = t.type === 'income' ? 'pos' : '';
@@ -810,7 +817,7 @@ function txListHtml(){
   if (q) {
     items = S.tx.filter(function(t){
       var c = cat(t.cat), a = acc(t.acc), b = acc(t.to), sx = t.sub ? subById(t.sub) : null;
-      return [t.note, c && c.name, a && a.name, b && b.name, sx && sx.name, String(t.amount)].some(function(s){ return s && String(s).toLowerCase().indexOf(q) >= 0; });
+      return [t.note, t.place, c && c.name, a && a.name, b && b.name, sx && sx.name, String(t.amount)].some(function(s){ return s && String(s).toLowerCase().indexOf(q) >= 0; });
     });
   } else if (ui.search) {
     items = [];
@@ -887,6 +894,19 @@ function vStats(){
         '<span class="l2"><span class="bar"><i style="width:' + (x.v / list[0].v * 100).toFixed(1) + '%;background:' + t.fg + '"></i></span><span class="tr" style="color:' + tc + '">' + tr + '</span></span></span></div>';
     }).join('') + '</div>';
   } else h += '<div class="empty">Žádné výdaje</div>';
+  var pm2 = myPayMap(), places = {};
+  S.tx.forEach(function(t){
+    if (!t.place || (t.type !== 'expense' && t.type !== 'refund')) return;
+    var sd = statDate(t, pm2); if (!sd || sd.slice(0, 7) !== ym) return;
+    var k = t.place.trim().toLowerCase(), o = places[k] || (places[k] = {name:t.place.trim(), v:0, n:0});
+    if (t.type === 'expense') { o.v += czk(t); o.n++; } else o.v -= czk(t);
+  });
+  var pl2 = Object.keys(places).map(function(k){ return places[k]; }).filter(function(o){ return o.v > 0.005; }).sort(function(a, b){ return b.v - a.v; }).slice(0, 6);
+  if (pl2.length) {
+    h += '<div class="sh"><h2>Místa</h2><span class="r">nejvíc utraceno</span></div><div class="card">' + pl2.map(function(o){
+      return '<div class="row">' + tileHtml('#5F6470', ic('pin', 17), 'sm') + '<span class="main"><span class="t">' + esc(o.name) + '</span><span class="s">' + o.n + '× nákup</span></span><span class="amt">' + money(o.v) + '</span></div>';
+    }).join('') + '</div>';
+  }
   var inc = Object.keys(m.byInc).map(function(k){ return {v:m.byInc[k], c:cat(k)}; }).sort(function(a, b){ return b.v - a.v; });
   if (inc.length) {
     h += '<div class="sh"><h2>Příjmy</h2></div><div class="card">' + inc.map(function(x){
@@ -1290,6 +1310,8 @@ function txSheet(){
   h += '<div class="pchips">';
   if (d.type !== 'transfer') h += '<button class="pchip" onclick="App.accPick(\'acc\')" aria-label="Účet">' + (A ? ic(tinfo(A).ic, 16) : ic('wallet', 16)) + '<span>' + esc(A ? A.name : 'Účet') + '</span>' + (A ? '<span class="ty">' + esc(tinfo(A).s) + '</span>' : '') + '</button>';
   h += '<label class="pchip">' + ic('calendar', 16) + '<span id="dateLbl">' + dateLbl(d.date) + '</span><input type="date" aria-label="Datum" value="' + esc(d.date) + '" onchange="App.txSet(\'date\',this.value)"></label>';
+  var hasPlace = d.type === 'expense' || d.type === 'refund';
+  if (hasPlace && !d.placeOpen && !d.place) h += '<button class="pchip dash" onclick="App.txPlace()">+ Místo</button>';
   if (!d.noteOpen && !d.note) h += '<button class="pchip dash" onclick="App.txNote()">+ Poznámka</button>';
   if (isR) h += '<button class="pchip" onclick="App.txSign()">± Znaménko</button>';
   h += '</div>';
@@ -1306,9 +1328,10 @@ function txSheet(){
   }).join('') + '</div>';
   if (d.type === 'refund' && !d.sub) {
     var rx = d.ref ? refTx(d) : null;
-    h += rx ? '<div class="reflink">' + catTile(cat(rx.cat), 'sm') + '<button class="main" onclick="App.refPick()"><span class="k">K nákupu</span><span class="v">' + esc((rx.note || (cat(rx.cat) || {}).name || 'Nákup') + ' · ' + dateLbl(rx.date)) + ' · ' + moneyC(-rx.amount, accCur(acc(rx.acc))) + '</span></button><button class="x" onclick="App.refClear()" aria-label="Zrušit párování">' + ic('x', 18, 2) + '</button></div>'
+    h += rx ? '<div class="reflink">' + catTile(cat(rx.cat), 'sm') + '<button class="main" onclick="App.refPick()"><span class="k">K nákupu</span><span class="v">' + esc((rx.place || rx.note || (cat(rx.cat) || {}).name || 'Nákup') + ' · ' + dateLbl(rx.date)) + ' · ' + moneyC(-rx.amount, accCur(acc(rx.acc))) + '</span></button><button class="x" onclick="App.refClear()" aria-label="Zrušit párování">' + ic('x', 18, 2) + '</button></div>'
       : '<button class="reflink add" onclick="App.refPick()">' + ic('undo', 18) + '<span>Spárovat s nákupem</span>' + ic('chevR', 16, 2) + '</button>';
   }
+  if (hasPlace && (d.placeOpen || d.place)) h += '<label class="placein">' + ic('pin', 18) + '<input id="placeIn" placeholder="Místo / podnik" autocomplete="off" value="' + esc(d.place || '') + '" oninput="App.placeIn(this.value)"></label><div class="psug" id="psug">' + placeSugHtml(d.place) + '</div>';
   if (d.noteOpen || d.note) h += '<input class="inp notein" id="noteIn" placeholder="Poznámka" value="' + esc(d.note || '') + '" oninput="App.txSet(\'note\',this.value)">';
   h += '<div class="spacer"></div>';
   if (!S.nativeKeys) h += '<div class="keys">' + ['1','2','3','4','5','6','7','8','9',',','0','del'].map(function(k){
@@ -1322,6 +1345,7 @@ function txSheet(){
     if (S.nativeKeys && !d.noteFocus && !d.noFocus) { var ai = document.getElementById('amtIn'); if (ai) { ai.focus(); var L = ai.value.length; try { ai.setSelectionRange(L, L); } catch(e) {} } }
     d.noFocus = false;
     if (d.noteFocus) { var n = document.getElementById('noteIn'); if (n) n.focus(); d.noteFocus = false; }
+    if (d.placeFocus) { var pi = document.getElementById('placeIn'); if (pi) pi.focus(); d.placeFocus = false; }
   }, true);
 }
 /* Category tiles: up to 3 rows that scroll sideways; rows shrink so the sheet never scrolls vertically. */
@@ -1338,7 +1362,7 @@ function fitCats(){
   }
   if (rows < 1) g.style.setProperty('--rows', 1);
 }
-function readDraft(){ if (!draft) return; var n = document.getElementById('noteIn'); if (n) draft.note = n.value; var ai = document.getElementById('amtIn'); if (ai) draft.amount = ai.value; }
+function readDraft(){ if (!draft) return; var n = document.getElementById('noteIn'); if (n) draft.note = n.value; var pi = document.getElementById('placeIn'); if (pi) draft.place = pi.value; var ai = document.getElementById('amtIn'); if (ai) draft.amount = ai.value; }
 function setTxType(t){ readDraft(); if (draft.type !== t) { draft.cat = ''; draft.ref = ''; } draft.type = t; draft.noFocus = true; txSheet(); }
 function pickCat(id){
   draft.cat = id;
@@ -1349,6 +1373,33 @@ function txSet(f, v){
   if (f === 'acc') { var l = document.getElementById('accLbl'); if (l) l.textContent = (acc(v) || {}).name || ''; }
   if (f === 'to') { var t = document.getElementById('toLbl'); if (t) t.textContent = (acc(v) || {}).name || ''; }
   if (f === 'date') { var dl = document.getElementById('dateLbl'); if (dl) dl.textContent = dateLbl(v); }
+}
+function placeStats(){
+  var m = {};
+  S.tx.forEach(function(t){
+    if (!t.place) return;
+    var k = t.place.trim().toLowerCase(); if (!k) return;
+    var o = m[k] || (m[k] = {name:t.place.trim(), n:0, last:'', cat:''});
+    o.n++; if (t.date >= o.last) { o.last = t.date; o.name = t.place.trim(); if (t.type === 'expense') o.cat = t.cat; }
+  });
+  return m;
+}
+function placeSugHtml(q){
+  q = (q || '').trim().toLowerCase();
+  var m = placeStats(), list = Object.keys(m).map(function(k){ return m[k]; });
+  list = list.filter(function(o){ var k = o.name.toLowerCase(); return k !== q && (!q || k.indexOf(q) >= 0); });
+  if (draft && draft.cat && !q) list.sort(function(a, b){ return ((b.cat === draft.cat) - (a.cat === draft.cat)) || b.n - a.n || (a.last < b.last ? 1 : -1); });
+  else list.sort(function(a, b){ return b.n - a.n || (a.last < b.last ? 1 : -1); });
+  return list.slice(0, 8).map(function(o){ return '<button class="pchip" data-p="' + esc(o.name) + '" onclick="App.pickPlace(this.getAttribute(\'data-p\'))">' + esc(o.name) + '</button>'; }).join('');
+}
+function txPlace(){ readDraft(); draft.placeOpen = true; draft.placeFocus = true; draft.noFocus = true; txSheet(); }
+function placeIn(v){ draft.place = v; var el = document.getElementById('psug'); if (el) { el.innerHTML = placeSugHtml(v); fitCats(); } }
+function pickPlace(name){
+  draft.place = name;
+  var pi = document.getElementById('placeIn'); if (pi) { pi.value = name; pi.blur(); }
+  var el = document.getElementById('psug'); if (el) el.innerHTML = '';
+  if (!draft.cat) { var o = placeStats()[name.toLowerCase()]; if (o && o.cat && cat(o.cat)) pickCat(o.cat); }
+  fitCats();
 }
 function txNote(){ readDraft(); draft.noteOpen = true; draft.noFocus = true; draft.noteFocus = true; txSheet(); }
 function txSign(){ readDraft(); var a = String(draft.amount || ''); draft.amount = a.charAt(0) === '-' ? a.slice(1) : '-' + a; var ai = document.getElementById('amtIn'); if (ai) { ai.value = draft.amount; var c = document.getElementById('cta'); if (c) c.textContent = ctaText(draft); } else updAmt(); }
@@ -1390,13 +1441,13 @@ function refPick(){
 function refListHtml(q){
   q = (q || '').trim().toLowerCase();
   var items = S.tx.filter(function(t){ return t.type === 'expense' && t.id !== draft.id; }).sort(sortTx);
-  if (q) items = items.filter(function(t){ var c = cat(t.cat), a = acc(t.acc); return [t.note, c && c.name, a && a.name, String(t.amount)].some(function(s){ return s && String(s).toLowerCase().indexOf(q) >= 0; }); });
+  if (q) items = items.filter(function(t){ var c = cat(t.cat), a = acc(t.acc); return [t.note, t.place, c && c.name, a && a.name, String(t.amount)].some(function(s){ return s && String(s).toLowerCase().indexOf(q) >= 0; }); });
   else if (draft.cat) { var same = items.filter(function(t){ return t.cat === draft.cat; }); if (same.length) items = same.concat(items.filter(function(t){ return t.cat !== draft.cat; })); }
   items = items.slice(0, 80);
   if (!items.length) return '<div class="empty">Nic nenalezeno</div>';
   return '<div class="card">' + items.map(function(t){
     var c = cat(t.cat), a = acc(t.acc), rs = refundSum(t.id);
-    return '<button class="row" onclick="App.refSet(\'' + t.id + '\')">' + catTile(c) + '<span class="main"><span class="t">' + esc(t.note || (c ? c.name : 'Nákup')) + '</span><span class="s">' + esc([dShort(t.date), c && t.note ? c.name : '', a && a.name].filter(Boolean).join(' · ')) + (rs ? ' · <span class="pos">vráceno ' + money(rs) + '</span>' : '') + '</span></span><span class="amt">' + moneyC(-t.amount, accCur(a)) + '</span></button>';
+    return '<button class="row" onclick="App.refSet(\'' + t.id + '\')">' + catTile(c) + '<span class="main"><span class="t">' + esc(t.place || t.note || (c ? c.name : 'Nákup')) + '</span><span class="s">' + esc([dShort(t.date), c && (t.place || t.note) ? c.name : '', a && a.name].filter(Boolean).join(' · ')) + (rs ? ' · <span class="pos">vráceno ' + money(rs) + '</span>' : '') + '</span></span><span class="amt">' + moneyC(-t.amount, accCur(a)) + '</span></button>';
   }).join('') + '</div>';
 }
 function refFilter(q){ var el = document.getElementById('refList'); if (el) el.innerHTML = refListHtml(q); }
@@ -1847,6 +1898,7 @@ function saveTx(e){
   if (d.type === 'expense' || d.type === 'income' || d.type === 'refund') t.cat = d.cat;
   if (d.sub) { t.sub = d.sub; t.due = d.due; if (d.member) t.member = d.member; }
   if (d.type === 'refund' && d.ref && !d.sub) t.ref = d.ref;
+  if ((d.type === 'expense' || d.type === 'refund') && (d.place || '').trim()) t.place = d.place.trim();
   var idx = -1;
   S.tx.forEach(function(x,i){ if (x.id === t.id) idx = i; });
   if (idx >= 0) S.tx[idx] = t; else S.tx.push(t);
@@ -1960,12 +2012,12 @@ function importFile(input){
 function exportCSV(){
   var TN = {expense:'Výdaj', income:'Příjem', transfer:'Převod', reval:'Změna hodnoty', refund:'Vratka'};
   var q = function(s){ s = String(s == null ? '' : s); return /[;"\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s; };
-  var rows = [['Datum','Typ','Částka','Měna','Účet','Na účet','Kategorie','Poznámka','K nákupu','Připsáno']];
+  var rows = [['Datum','Typ','Částka','Měna','Účet','Na účet','Kategorie','Místo','Poznámka','K nákupu','Připsáno']];
   S.tx.slice().sort(sortTx).reverse().forEach(function(t){
     var a = acc(t.acc), b = acc(t.to), c = cat(t.cat);
     var sign = t.type === 'expense' ? -t.amount : t.amount;
     var rx = t.ref ? S.tx.filter(function(z){ return z.id === t.ref; })[0] : null;
-    rows.push([t.date, TN[t.type] || t.type, String(sign).replace('.', ','), accCur(a), a ? a.name : '', b ? b.name : '', c ? c.name : '', t.note || '', rx ? rx.date + ' ' + (rx.note || '') + ' ' + rx.amount : '', t.amount2 != null ? String(t.amount2).replace('.', ',') + ' ' + accCur(b) : '']);
+    rows.push([t.date, TN[t.type] || t.type, String(sign).replace('.', ','), accCur(a), a ? a.name : '', b ? b.name : '', c ? c.name : '', t.place || '', t.note || '', rx ? rx.date + ' ' + (rx.note || '') + ' ' + rx.amount : '', t.amount2 != null ? String(t.amount2).replace('.', ',') + ' ' + accCur(b) : '']);
   });
   download('finance-pohyby-' + today() + '.csv', '\ufeff' + rows.map(function(r){ return r.map(q).join(';'); }).join('\r\n'), 'text/csv');
 }
@@ -2026,11 +2078,11 @@ function sampleData(){
     tx(D(20),'transfer',5200,bank,{to:loan, note:'Splátka úvěru'});
     tx(D(3),'transfer',2000,bank,{to:cash, note:'Výběr z bankomatu'});
     var k, n = ri(6,9);
-    for (k = 0; k < n; k++) { var cashy = Math.random() < 0.3; tx(D(ri(1,28)),'expense',r(cashy ? 150 : 300, cashy ? 600 : 1700),cashy ? cash : bank,{cat:E('Potraviny'), note:['Lidl','Albert','Billa','Kaufland','Pekárna','Zelenina na trhu'][ri(0,5)]}); }
+    for (k = 0; k < n; k++) { var cashy = Math.random() < 0.3; tx(D(ri(1,28)),'expense',r(cashy ? 150 : 300, cashy ? 600 : 1700),cashy ? cash : bank,{cat:E('Potraviny'), place:['Lidl','Albert','Billa','Kaufland','Pekárna u Nováků','Farmářský trh'][ri(0,5)]}); }
     n = ri(3,6);
     for (k = 0; k < n; k++) { var c2 = Math.random() < 0.5; tx(D(ri(1,28)),'expense',r(90,650),c2 ? cash : bank,{cat:E('Restaurace a kavárny'), note:['Oběd v práci','Kafe','Večeře s přáteli','Pizza'][ri(0,3)]}); }
-    tx(D(ri(1,14)),'expense',r(900,1600),bank,{cat:E('Doprava'), note:'Tankování'});
-    tx(D(ri(15,28)),'expense',r(900,1600),bank,{cat:E('Doprava'), note:'Tankování'});
+    tx(D(ri(1,14)),'expense',r(900,1600),bank,{cat:E('Doprava'), note:'Tankování', place:['Shell','OMV','MOL'][ri(0,2)]});
+    tx(D(ri(15,28)),'expense',r(900,1600),bank,{cat:E('Doprava'), note:'Tankování', place:['Shell','OMV','MOL'][ri(0,2)]});
     if (Math.random() < 0.6) tx(D(ri(1,28)),'expense',r(200,900),bank,{cat:E('Zábava'), note:['Kino','Koncert','Bowling','Divadlo'][ri(0,3)]});
     if (Math.random() < 0.35) tx(D(ri(1,28)),'expense',r(600,2800),bank,{cat:E('Oblečení')});
     if (Math.random() < 0.3) tx(D(ri(1,28)),'expense',r(150,900),bank,{cat:E('Zdraví'), note:'Lékárna'});
@@ -2070,7 +2122,7 @@ function sampleData(){
     });
   });
   tx(t,'expense',89,cash,{cat:E('Restaurace a kavárny'), note:'Kafe cestou'});
-  tx(t,'expense',642,bank,{cat:E('Potraviny'), note:'Albert'});
+  tx(t,'expense',642,bank,{cat:E('Potraviny'), place:'Albert'});
   s.lastAcc = bank;
   s.lastBackup = t;
   return s;
@@ -2086,7 +2138,7 @@ window.App = {tab:tab, addTx:addTx, editTx:editTx, setTxType:setTxType, pickCat:
   addCat:addCat, delCat:delCat, loadSample:loadSample, wipe:wipe,
   subForm:subForm, subDetail:subDetail, myPay:myPay, memberPay:memberPay, owedSheet:owedSheet, owedPay:owedPay, owedPayAll:owedPayAll, owedAll:owedAll,
   subCalc:subCalc, subAddMember:subAddMember, subDelMember:subDelMember, subSplit:subSplit, saveSub:saveSub, delSub:delSub, subIc:subIc,
-  amtIn:amtIn, refPick:refPick, refFilter:refFilter, refSet:refSet, refClear:refClear, refBack:refBack, setNativeKeys:setNativeKeys, accPick:accPick, accSet:accSet, fetchRates:fetchRates, setRate:setRate, accCurChange:accCurChange};
+  amtIn:amtIn, refPick:refPick, refFilter:refFilter, refSet:refSet, refClear:refClear, refBack:refBack, setNativeKeys:setNativeKeys, accPick:accPick, accSet:accSet, fetchRates:fetchRates, setRate:setRate, accCurChange:accCurChange, txPlace:txPlace, placeIn:placeIn, pickPlace:pickPlace};
 
 testStorage();
 S = load();

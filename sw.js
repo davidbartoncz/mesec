@@ -1,5 +1,5 @@
 // Finance – offline cache. Při změně aplikace zvyš číslo verze.
-const CACHE = 'finance-v18';
+const CACHE = 'finance-v19';
 const ASSETS = ['./', './index.html', './manifest.webmanifest', './icon-180.png', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {

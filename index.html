@@ -397,6 +397,9 @@ nav.tabs .plus{justify-self:center;width:54px;height:54px;border-radius:27px;bac
 .brow .bbar{margin-left:48px}
 .bin{width:112px;min-height:42px;padding:8px 12px;text-align:right;flex:none}
 
+.bcard{appearance:none;display:block;width:calc(100% - 32px);margin:10px 16px 0;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:26px;padding:14px 18px 16px;color:var(--ink)}
+.bcard .tiles3{margin-top:12px}
+
 </style>
 </head>
 <body>
@@ -956,24 +959,26 @@ function upcomingHtml(){
   }).join('') + '</div>';
 }
 function homeBudget(){
-  var ym = ui.txMonth, tot = budgetTotal(), mm = monthStats(ym), inv = investedIn(ym);
-  var b1 = tot > 0
-    ? '<button onclick="App.goBudget()"><span class="k"><span>Zbývá z rozpočtu</span><span style="font-weight:800;color:' + budColor(mm.exp / tot) + '">' + Math.round(mm.exp / tot * 100) + '\u00a0%</span></span><span class="v"' + (tot - mm.exp < 0 ? ' style="color:var(--neg)"' : '') + '>' + money(Math.round(tot - mm.exp)) + '</span>' + bbar(mm.exp / tot, monthPace(ym)) + '</button>'
-    : '<button onclick="App.goBudget()"><span class="k"><span>Rozpočet</span></span><span class="v">Nastavit</span></button>';
-  var b2 = '<button onclick="App.goBudget()"><span class="k"><span>Investováno</span>' + (mm.inc > 0 ? '<span style="font-weight:800" class="pos">' + Math.round(inv.v / mm.inc * 100) + '\u00a0%</span>' : '') + '</span><span class="v">' + money(Math.round(inv.v)) + '</span></button>';
-  return '<div class="duo">' + b1 + b2 + '</div>';
+  var ym = ui.txMonth, o = budgetPace(ym), mm = monthStats(ym), inv = investedIn(ym), ow = owed(), owTot = ow.reduce(function(sm, x){ return sm + x.total; }, 0);
+  var h;
+  if (o) {
+    var mn = MONTHS[+ym.slice(5, 7) - 1];
+    h = '<button class="bcard" onclick="App.goBudget()"><span class="rowsb"><span class="lbl">Rozpočet · ' + mn + '</span><span class="badge' + (o.p > 1 ? ' up' : '') + '" style="color:' + budColor(o.p) + '">' + Math.round(o.p * 100) + '\u00a0% utraceno</span></span>' +
+      '<span class="bignum md" style="display:block"' + (o.left < 0 ? ' class="neg"' : '') + '>' + (o.left < 0 ? '−' : '') + NF.format(Math.round(Math.abs(o.left))) + '<span class="cur" style="font-size:15px">' + (o.left < 0 ? 'přes rozpočet' : 'zbývá z ' + NF.format(Math.round(o.tot)) + ' ' + esc(S.currency)) + '</span></span>' +
+      '<span style="display:block;margin-top:10px">' + bbar(o.p, monthPace(ym), true) + '</span>' + paceTiles(o, +ym.slice(5, 7)) + '</button>';
+  } else {
+    h = '<button class="bcard" onclick="App.goBudget()"><span class="rowsb"><span class="lbl">Rozpočet</span><span class="linkr">Nastavit' + ic('chevR', 14, 2.4) + '</span></span><span class="note" style="display:block;margin:6px 0 0">Měsíční limit a přepočet, kolik lze utratit za den a za týden.</span></button>';
+  }
+  h += '<div class="duo"><button onclick="App.goBudget()"><span class="k"><span>Investováno</span>' + (mm.inc > 0 ? '<span style="font-weight:800" class="pos">' + Math.round(inv.v / mm.inc * 100) + '\u00a0%</span>' : '') + '</span><span class="v">' + money(Math.round(inv.v)) + '</span></button>' +
+    '<button onclick="App.tab(\'subs\')"><span class="k"><span>Nevráceno</span><span>' + (ow.length ? ow.length + ' ' + pl(ow.length, 'člověk', 'lidé', 'lidí') : '') + '</span></span><span class="v">' + money(owTot) + '</span></button></div>';
+  return h;
 }
 function vHome(){
   var dl = new Date().toLocaleDateString('cs-CZ', {weekday:'long', day:'numeric', month:'long'});
   dl = dl[0].toUpperCase() + dl.slice(1);
-  var head = '<header class="top home"><button class="avbtn" onclick="App.tab(\'settings\')" aria-label="Nastavení a záloha">' + ic('sliders', 19, 2.2) + '</button><div class="hd"><span class="pre">' + dl + '</span><h1 class="sm">Přehled</h1></div>' + eyePill() + '</header>';
+  var head = '<header class="top home"><button class="avbtn" onclick="App.tab(\'settings\')" aria-label="Nastavení a záloha">' + ic('sliders', 19, 2.2) + '</button><div class="hd"><span class="pre">' + dl + '</span><h1 class="sm">Přehled</h1></div></header>';
   if (!S.accounts.length) return head + vEmptyBody();
-  var nw = netWorth(), prevNw = netWorth(monthEnd(addMonths(curYM(), -1))), hid = hidden();
-  var dp = Math.abs(prevNw) > 0 ? (nw - prevNw) / Math.abs(prevNw) : null;
-  var ow = owed(), owTot = ow.reduce(function(sm, o){ return sm + o.total; }, 0);
-  var h = head + spendCard(ui.txMonth) +
-    '<div class="duo"><button onclick="App.tab(\'assets\')"><span class="k"><span>Čisté jmění</span>' + (dp !== null && !hid ? '<span class="' + (dp >= 0 ? 'pos' : 'warn') + '" style="font-weight:800">' + pctStr(dp) + '</span>' : '') + '</span><span class="v">' + hm(Math.round(nw)) + '</span></button>' +
-    '<button onclick="App.tab(\'subs\')"><span class="k"><span>Nevráceno</span><span>' + (ow.length ? ow.length + ' ' + pl(ow.length, 'člověk', 'lidé', 'lidí') : '') + '</span></span><span class="v">' + money(owTot) + '</span></button></div>' + homeBudget() +
+  var h = head + spendCard(ui.txMonth) + homeBudget() +
     upcomingHtml();
   var recent = S.tx.slice().sort(sortTx).slice(0, 3);
   h += '<div class="sh"><h2>Poslední pohyby</h2><button class="link" onclick="App.tab(\'tx\')">Vše</button></div>';
@@ -1737,6 +1742,33 @@ function monthPace(ym){
   var d = new Date(), dim = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
   return d.getDate() / dim;
 }
+/* Allowance to stay within the monthly budget: what is left, spread over the remaining days.
+   The weekly figure is fixed at the start of the week (Monday or the 1st), so it does not drift as the week goes on. */
+function budgetPace(ym){
+  var tot = budgetTotal(); if (!(tot > 0)) return null;
+  var m = monthStats(ym), left = tot - m.exp, o = {tot:tot, spent:m.exp, left:left, p:m.exp / tot, cur:ym === curYM()};
+  if (!o.cur) return o;
+  var now = new Date(), day = now.getDate(), dim = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate(), daily = dayNet(ym);
+  var daysLeft = dim - day + 1;
+  o.daysLeft = daysLeft;
+  o.perDay = Math.max(0, left) / daysLeft;
+  o.perWeek = daysLeft >= 7 ? o.perDay * 7 : Math.max(0, left);
+  var wd = (now.getDay() + 6) % 7, ws = Math.max(1, day - wd), we = Math.min(dim, day - wd + 6);
+  var before = 0, wsp = 0, i;
+  for (i = 1; i < ws; i++) before += daily[i - 1] || 0;
+  for (i = ws; i <= day; i++) wsp += daily[i - 1] || 0;
+  var wdays = we - ws + 1, leftAtStart = tot - before, daysAtStart = dim - ws + 1;
+  o.week = {from:ws, to:we, budget:Math.max(0, leftAtStart) / daysAtStart * wdays, spent:wsp};
+  o.week.left = o.week.budget - wsp;
+  return o;
+}
+function paceTiles(o, mon){
+  if (!o || !o.cur) return '';
+  return '<div class="tiles3"><div><div class="k">Na den</div><div class="v">' + money(Math.floor(o.perDay)) + '</div></div>' +
+    '<div><div class="k">Na týden</div><div class="v">' + money(Math.floor(o.perWeek)) + '</div></div>' +
+    '<div class="accent"><div class="k">Tento týden zbývá</div><div class="v"' + (o.week.left < 0 ? ' style="color:var(--neg)"' : '') + '>' + money(Math.round(o.week.left)) + '</div></div></div>' +
+    '<div class="rowsb small mute" style="font-weight:600;margin-top:8px"><span>Týden ' + o.week.from + '.–' + o.week.to + '. ' + mon + '.: utraceno ' + money(Math.round(o.week.spent)) + '</span><span>z ' + money(Math.floor(o.week.budget)) + '</span></div>';
+}
 function vBudget(){
   var ym = ui.budMonth || curYM(), cur = curYM(), m = monthStats(ym), tot = budgetTotal(), bc = budgetCats(), pace = monthPace(ym);
   var nm = MONTHS[+ym.slice(5, 7) - 1]; nm = nm[0].toUpperCase() + nm.slice(1) + (ym.slice(0, 4) !== cur.slice(0, 4) ? ' ' + ym.slice(2, 4) : '');
@@ -1749,8 +1781,8 @@ function vBudget(){
     h += '<section class="hcard"><div class="rowsb"><span class="lbl">Utraceno z rozpočtu</span><span class="badge' + (left < 0 ? ' up' : '') + '">' + (left >= 0 ? 'zbývá ' + money(Math.round(left)) : 'přes o ' + money(Math.round(-left))) + '</span></div>' +
       '<div class="bignum md">' + NF.format(Math.round(m.exp)) + '<span class="cur" style="font-size:15px">z ' + NF.format(Math.round(tot)) + ' ' + esc(S.currency) + '</span></div>' +
       '<div style="margin-top:12px">' + bbar(p, pace, true) + '</div>' +
-      '<div class="rowsb small mute" style="font-weight:600;margin-top:8px"><span>' + Math.round(p * 100) + '\u00a0% rozpočtu</span><span>' +
-      (daysLeft > 0 && left > 0 ? money(Math.floor(left / daysLeft)) + ' na den do konce měsíce' : pace !== null ? 'čárka = dnešní den v měsíci' : '') + '</span></div></section>';
+      '<div class="rowsb small mute" style="font-weight:600;margin-top:8px"><span>' + Math.round(p * 100) + '\u00a0% rozpočtu</span><span>' + (pace !== null ? 'čárka = dnešní den v měsíci' : '') + '</span></div>' +
+      paceTiles(budgetPace(ym), +ym.slice(5, 7)) + '</section>';
   } else {
     h += '<section class="hcard"><div class="lbl">Rozpočet zatím není nastavený</div><p class="note" style="margin:6px 0 12px">Měsíční limity pro kategorie výdajů. Aplikace pak hlídá, kolik z nich zbývá.</p><button class="btn" onclick="App.budgetForm()">Nastavit rozpočet</button></section>';
   }

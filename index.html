@@ -50,7 +50,7 @@ svg.i{fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round;f
 .glassy{background:var(--glass);border:1px solid var(--glass-line);box-shadow:inset 0 1px 0 var(--glass-hi);-webkit-backdrop-filter:blur(18px) saturate(180%);backdrop-filter:blur(18px) saturate(180%)}
 
 #banner{background:var(--neg);color:var(--bg);font-size:13px;font-weight:700;padding:10px 20px;text-align:center}
-main{position:relative;max-width:600px;margin:0 auto;padding-bottom:calc(118px + env(safe-area-inset-bottom,0px));overflow-x:hidden;min-height:100vh}
+main{position:relative;max-width:600px;margin:0 auto;padding-bottom:calc(96px + env(safe-area-inset-bottom,0px));overflow-x:hidden;min-height:100vh}
 .glow{position:absolute;left:-80px;top:-170px;width:560px;height:440px;background:radial-gradient(closest-side,var(--glow),transparent);pointer-events:none;z-index:0;-webkit-mask-image:linear-gradient(to bottom,transparent 170px,#000 300px);mask-image:linear-gradient(to bottom,transparent 170px,#000 300px)}
 main>*:not(.glow){position:relative;z-index:1}
 
@@ -264,7 +264,7 @@ select.inp{background-image:linear-gradient(45deg,transparent 50%,var(--mut) 50%
 
 /* glass nav with + in the middle */
 .navfade{position:fixed;left:0;right:0;bottom:0;height:110px;background:linear-gradient(transparent,color-mix(in srgb,var(--bg) 85%,transparent));pointer-events:none;z-index:5}
-nav.tabs{position:fixed;left:50%;transform:translateX(-50%);width:min(calc(100% - 32px),560px);bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:6;height:62px;display:grid;grid-template-columns:1fr 1fr 66px 1fr 1fr;align-items:center;padding:0 4px;border-radius:31px;background:var(--glass);border:1px solid var(--glass-line);box-shadow:inset 0 1px 0 var(--glass-hi),var(--shadow);-webkit-backdrop-filter:blur(24px) saturate(180%);backdrop-filter:blur(24px) saturate(180%)}
+nav.tabs{position:fixed;left:50%;transform:translateX(-50%);width:min(calc(100% - 28px),560px);bottom:max(8px,calc(env(safe-area-inset-bottom,0px) - 14px));z-index:6;height:62px;display:grid;grid-template-columns:1fr 1fr 66px 1fr 1fr;align-items:center;padding:0 4px;border-radius:31px;background:var(--glass);border:1px solid var(--glass-line);box-shadow:inset 0 1px 0 var(--glass-hi),var(--shadow);-webkit-backdrop-filter:blur(24px) saturate(180%);backdrop-filter:blur(24px) saturate(180%)}
 nav.tabs button{appearance:none;border:0;height:54px;border-radius:27px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:10px;font-weight:600;background:transparent;color:var(--mut);padding:0;min-width:0}
 nav.tabs button.on{background:var(--glass-sel);color:var(--ink);font-weight:700}
 nav.tabs .plus{justify-self:center;width:54px;height:54px;border-radius:27px;background:var(--acc);color:var(--onacc);border:1px solid rgba(255,255,255,.5);box-shadow:inset 0 1px 0 rgba(255,255,255,.65),0 6px 16px rgba(0,0,0,.22)}
@@ -358,7 +358,7 @@ nav.tabs .plus{justify-self:center;width:54px;height:54px;border-radius:27px;bac
 .xbtn{appearance:none;background:var(--elev);border:0;color:var(--mut);width:46px;height:50px;border-radius:18px;font-size:20px;flex:none}
 .btns2{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
 
-#toast{position:fixed;left:50%;bottom:calc(94px + env(safe-area-inset-bottom,0px));transform:translate(-50%,10px);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:22px;font-size:13px;font-weight:700;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:30;max-width:88vw;text-align:center}
+#toast{position:fixed;left:50%;bottom:calc(76px + max(8px,calc(env(safe-area-inset-bottom,0px) - 14px)));transform:translate(-50%,10px);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:22px;font-size:13px;font-weight:700;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:30;max-width:88vw;text-align:center}
 #toast.on{opacity:1;transform:translate(-50%,0)}
 @media (prefers-reduced-motion: reduce){.sheet{animation:none}#toast{transition:none}}
 @media (max-height:740px){
@@ -382,6 +382,20 @@ nav.tabs .plus{justify-self:center;width:54px;height:54px;border-radius:27px;bac
   .ctile{height:50px}
   .tpls{display:none}
 }
+
+.bbar{position:relative;display:block;height:6px;border-radius:3px;background:var(--elev);margin-top:8px}
+.bbar.big{height:10px;border-radius:5px;margin-top:0}
+.bbar i{display:block;height:100%;border-radius:inherit}
+.bbar .pace{position:absolute;top:-3px;bottom:-3px;width:2px;margin-left:-1px;border-radius:1px;background:var(--ink);opacity:.55}
+.duo .bbar{margin-top:8px}
+.brow{appearance:none;display:block;width:100%;text-align:left;background:transparent;border:0;border-top:1px solid var(--line);padding:10px 0 12px;color:var(--ink)}
+.card>.ch2+.brow{border-top:0}
+.brow .top{display:flex;align-items:center;gap:12px}
+.brow .main{flex:1;min-width:0}
+.brow .t{display:block;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brow .s{display:block;font-size:12px;font-weight:500;color:var(--mut)}
+.brow .bbar{margin-left:48px}
+.bin{width:112px;min-height:42px;padding:8px 12px;text-align:right;flex:none}
 
 </style>
 </head>
@@ -923,6 +937,11 @@ function homeTodos(){
     var age = daysBetween(lastVal(a), t);
     if (age >= staleDays(g)) out.push({tile:tileHtml('var(--ca)', ic('trend', 17), 'sm'), title:esc(a.name), sub:'hodnota je stará ' + age + ' ' + pl(age, 'den', 'dny', 'dní'), btn:'Aktualizovat', act:'App.updateValue(\'' + a.id + '\')'});
   });
+  var bcs = budgetCats(), mnow = monthStats(curYM());
+  Object.keys(bcs).forEach(function(k){
+    var sp = mnow.byCat[k] || 0; if (sp <= bcs[k]) return;
+    out.push({tile:catTile(cat(k), 'sm'), title:esc(cat(k).name), sub:'přes rozpočet o ' + money(Math.round(sp - bcs[k])), btn:'Rozpočet', act:'App.goBudget()'});
+  });
   if (S.tx.length >= 5) {
     var since = S.lastBackup ? daysBetween(S.lastBackup, t) : null;
     if (since === null || since >= 14) out.push({tile:tileHtml('var(--cb)', ic('download', 17), 'sm'), title:'Záloha dat', sub:since === null ? 'zatím žádná' : 'naposledy před ' + since + ' dny', btn:'Zálohovat', act:'App.exportJSON()'});
@@ -936,6 +955,14 @@ function upcomingHtml(){
     return '<div class="row">' + o.tile + '<span class="main"><span class="t">' + o.title + '</span><span class="s">' + o.sub + '</span></span>' + (o.btn ? '<button class="actb" onclick="' + o.act + '">' + o.btn + '</button>' : '') + '</div>';
   }).join('') + '</div>';
 }
+function homeBudget(){
+  var ym = ui.txMonth, tot = budgetTotal(), mm = monthStats(ym), inv = investedIn(ym);
+  var b1 = tot > 0
+    ? '<button onclick="App.goBudget()"><span class="k"><span>Zbývá z rozpočtu</span><span style="font-weight:800;color:' + budColor(mm.exp / tot) + '">' + Math.round(mm.exp / tot * 100) + '\u00a0%</span></span><span class="v"' + (tot - mm.exp < 0 ? ' style="color:var(--neg)"' : '') + '>' + money(Math.round(tot - mm.exp)) + '</span>' + bbar(mm.exp / tot, monthPace(ym)) + '</button>'
+    : '<button onclick="App.goBudget()"><span class="k"><span>Rozpočet</span></span><span class="v">Nastavit</span></button>';
+  var b2 = '<button onclick="App.goBudget()"><span class="k"><span>Investováno</span>' + (mm.inc > 0 ? '<span style="font-weight:800" class="pos">' + Math.round(inv.v / mm.inc * 100) + '\u00a0%</span>' : '') + '</span><span class="v">' + money(Math.round(inv.v)) + '</span></button>';
+  return '<div class="duo">' + b1 + b2 + '</div>';
+}
 function vHome(){
   var dl = new Date().toLocaleDateString('cs-CZ', {weekday:'long', day:'numeric', month:'long'});
   dl = dl[0].toUpperCase() + dl.slice(1);
@@ -946,7 +973,7 @@ function vHome(){
   var ow = owed(), owTot = ow.reduce(function(sm, o){ return sm + o.total; }, 0);
   var h = head + spendCard(ui.txMonth) +
     '<div class="duo"><button onclick="App.tab(\'assets\')"><span class="k"><span>Čisté jmění</span>' + (dp !== null && !hid ? '<span class="' + (dp >= 0 ? 'pos' : 'warn') + '" style="font-weight:800">' + pctStr(dp) + '</span>' : '') + '</span><span class="v">' + hm(Math.round(nw)) + '</span></button>' +
-    '<button onclick="App.tab(\'subs\')"><span class="k"><span>Nevráceno</span><span>' + (ow.length ? ow.length + ' ' + pl(ow.length, 'člověk', 'lidé', 'lidí') : '') + '</span></span><span class="v">' + money(owTot) + '</span></button></div>' +
+    '<button onclick="App.tab(\'subs\')"><span class="k"><span>Nevráceno</span><span>' + (ow.length ? ow.length + ' ' + pl(ow.length, 'člověk', 'lidé', 'lidí') : '') + '</span></span><span class="v">' + money(owTot) + '</span></button></div>' + homeBudget() +
     upcomingHtml();
   var recent = S.tx.slice().sort(sortTx).slice(0, 3);
   h += '<div class="sh"><h2>Poslední pohyby</h2><button class="link" onclick="App.tab(\'tx\')">Vše</button></div>';
@@ -1032,6 +1059,9 @@ function vStats(){
     }).join('');
   } else h += '<div class="empty" style="padding:22px 0 18px">Žádné výdaje</div>';
   h += '</section>';
+  var tot2 = budgetTotal(), inv2 = investedIn(ym);
+  h += '<div class="duo"><button onclick="App.budMonthGo(\'' + ym + '\')"><span class="k"><span>Rozpočet</span>' + (tot2 > 0 ? '<span style="font-weight:800;color:' + budColor(m.exp / tot2) + '">' + Math.round(m.exp / tot2 * 100) + '\u00a0%</span>' : '') + '</span><span class="v">' + (tot2 > 0 ? money(Math.round(tot2 - m.exp)) : 'Nastavit') + '</span></button>' +
+    '<button onclick="App.budMonthGo(\'' + ym + '\')"><span class="k"><span>Investováno</span>' + (m.inc > 0 ? '<span class="pos" style="font-weight:800">' + Math.round(inv2.v / m.inc * 100) + '\u00a0%</span>' : '') + '</span><span class="v">' + money(Math.round(inv2.v)) + '</span></button></div>';
   var pm2 = myPayMap(), places = {};
   S.tx.forEach(function(t){
     if (!t.place || (t.type !== 'expense' && t.type !== 'refund')) return;
@@ -1393,15 +1423,16 @@ function render(){
   charts = {}; fxCache = {};
   DARK = !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
   var v = ui.view;
-  var hv = (v === 'stats' || v === 'settings') ? ui.prev : v;
+  var hv = (v === 'stats' || v === 'settings' || v === 'budget') ? ui.prev : v;
   document.querySelectorAll('nav.tabs button[data-v]').forEach(function(b){ var on = b.getAttribute('data-v') === hv; b.classList.toggle('on', on); if (on) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
-  var fn = {home:vHome, tx:vTx, stats:vStats, subs:vSubs, assets:vAssets, settings:vSettings}[v] || vHome;
+  var fn = {home:vHome, tx:vTx, stats:vStats, subs:vSubs, assets:vAssets, settings:vSettings, budget:vBudget}[v] || vHome;
   $('#view').innerHTML = '<div class="glow" aria-hidden="true"></div>' + fn();
   bindCharts($('#view'));
 }
 function tab(v){
   if (v !== ui.view) ui.reveal = false;
-  if ((v === 'stats' || v === 'settings') && ui.view !== 'stats' && ui.view !== 'settings') ui.prev = ui.view;
+  var sec = {stats:1, settings:1, budget:1};
+  if (sec[v] && !sec[ui.view]) ui.prev = ui.view;
   ui.view = v; render(); window.scrollTo(0, 0);
 }
 function back(){ tab(ui.prev || 'home'); }
@@ -1679,6 +1710,112 @@ function key(k){
   draft.amount = (neg && a ? '-' : '') + a;
   updAmt();
 }
+
+/* ---------- budget & investment rate ---------- */
+function investedIn(ym){
+  var v = 0, by = {};
+  S.tx.forEach(function(t){
+    if (t.type !== 'transfer' || t.date.slice(0, 7) !== ym) return;
+    var a = acc(t.acc), b = acc(t.to), ga = a && isGrowth(a), gb = b && isGrowth(b), x;
+    if (gb && !ga) { x = czk(t); v += x; by[b.id] = (by[b.id] || 0) + x; }
+    else if (ga && !gb) { x = czk(t); v -= x; by[a.id] = (by[a.id] || 0) - x; }
+  });
+  return {v:v, by:by};
+}
+function budgetCats(){ var o = {}; Object.keys(S.budgets || {}).forEach(function(k){ if (cat(k) && +S.budgets[k] > 0) o[k] = +S.budgets[k]; }); return o; }
+function budgetTotal(){
+  if (+S.budgetTotal > 0) return +S.budgetTotal;
+  var b = budgetCats(); return Object.keys(b).reduce(function(s, k){ return s + b[k]; }, 0);
+}
+function budColor(p){ return p > 1 ? 'var(--neg)' : p >= 0.8 ? 'var(--warn)' : 'var(--pos)'; }
+function bbar(p, pace, big){
+  return '<span class="bbar' + (big ? ' big' : '') + '"><i style="width:' + Math.min(100, Math.max(0, p * 100)).toFixed(1) + '%;background:' + budColor(p) + '"></i>' +
+    (pace !== null && pace !== undefined ? '<b class="pace" style="left:' + (pace * 100).toFixed(1) + '%" aria-hidden="true"></b>' : '') + '</span>';
+}
+function monthPace(ym){
+  var cur = curYM(); if (ym !== cur) return null;
+  var d = new Date(), dim = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  return d.getDate() / dim;
+}
+function vBudget(){
+  var ym = ui.budMonth || curYM(), cur = curYM(), m = monthStats(ym), tot = budgetTotal(), bc = budgetCats(), pace = monthPace(ym);
+  var nm = MONTHS[+ym.slice(5, 7) - 1]; nm = nm[0].toUpperCase() + nm.slice(1) + (ym.slice(0, 4) !== cur.slice(0, 4) ? ' ' + ym.slice(2, 4) : '');
+  var sw = '<div class="mswitch"><button onclick="App.budMonth(-1)" aria-label="Předchozí měsíc">' + ic('chevL', 15, 2.4) + '</button><span>' + nm + '</span><button onclick="App.budMonth(1)" aria-label="Další měsíc"' + (ym >= cur ? ' style="opacity:.35"' : '') + '>' + ic('chevR', 15, 2.4) + '</button></div>';
+  var h = hdr('Rozpočet', sw, true);
+  if (!S.accounts.length) return h + vEmptyBody();
+  if (tot > 0) {
+    var p = m.exp / tot, left = tot - m.exp, dim = new Date(+ym.slice(0, 4), +ym.slice(5, 7), 0).getDate();
+    var daysLeft = ym === cur ? dim - new Date().getDate() + 1 : 0;
+    h += '<section class="hcard"><div class="rowsb"><span class="lbl">Utraceno z rozpočtu</span><span class="badge' + (left < 0 ? ' up' : '') + '">' + (left >= 0 ? 'zbývá ' + money(Math.round(left)) : 'přes o ' + money(Math.round(-left))) + '</span></div>' +
+      '<div class="bignum md">' + NF.format(Math.round(m.exp)) + '<span class="cur" style="font-size:15px">z ' + NF.format(Math.round(tot)) + ' ' + esc(S.currency) + '</span></div>' +
+      '<div style="margin-top:12px">' + bbar(p, pace, true) + '</div>' +
+      '<div class="rowsb small mute" style="font-weight:600;margin-top:8px"><span>' + Math.round(p * 100) + '\u00a0% rozpočtu</span><span>' +
+      (daysLeft > 0 && left > 0 ? money(Math.floor(left / daysLeft)) + ' na den do konce měsíce' : pace !== null ? 'čárka = dnešní den v měsíci' : '') + '</span></div></section>';
+  } else {
+    h += '<section class="hcard"><div class="lbl">Rozpočet zatím není nastavený</div><p class="note" style="margin:6px 0 12px">Měsíční limity pro kategorie výdajů. Aplikace pak hlídá, kolik z nich zbývá.</p><button class="btn" onclick="App.budgetForm()">Nastavit rozpočet</button></section>';
+  }
+  var inv = investedIn(ym), inc = m.inc, rest = inc - m.exp - Math.max(0, inv.v);
+  var si = 0, sv = 0, sn = 0, i;
+  for (i = 0; i < 12; i++) { var y = addMonths(cur, -i), s2 = monthStats(y); if (s2.inc > 0) { si += s2.inc; sv += investedIn(y).v; sn++; } }
+  h += '<section class="hcard mt"><div class="rowsb"><span class="lbl">Investováno</span>' + (inc > 0 ? '<span class="badge' + (inv.v < 0 ? ' up' : '') + '">' + Math.round(inv.v / inc * 100) + '\u00a0% příjmů</span>' : '') + '</div>' +
+    '<div class="bignum md">' + (inv.v < 0 ? '−' : '') + NF.format(Math.round(Math.abs(inv.v))) + '<span class="cur" style="font-size:15px">' + esc(S.currency) + '</span></div>';
+  if (inc > 0) {
+    var parts = [['Utraceno', Math.max(0, m.exp), 'var(--cn)'], ['Investováno', Math.max(0, inv.v), 'var(--pos)'], ['Zbylo', Math.max(0, rest), 'var(--cb)']];
+    h += '<div class="sbar" style="margin-top:14px" role="img" aria-label="Rozdělení příjmů">' + parts.map(function(x){ return '<i style="flex:' + Math.max(x[1], inc * 0.004).toFixed(2) + ';background:' + x[2] + '"></i>'; }).join('') + '</div>' +
+      '<div class="aleg">' + parts.map(function(x){ return '<div><div class="k"><i style="background:' + x[2] + '"></i>' + x[0] + '</div><div class="v">' + Math.round(x[1] / inc * 100) + '\u00a0%</div></div>'; }).join('') + '</div>';
+  } else h += '<p class="note" style="margin:8px 0 0">V tomto měsíci zatím nejsou zapsané žádné příjmy.</p>';
+  var byIds = Object.keys(inv.by).filter(function(k){ return Math.abs(inv.by[k]) >= 0.5; });
+  if (byIds.length) h += '<div style="margin-top:6px">' + byIds.map(function(k){ var a = acc(k);
+    return '<div class="row" style="padding:8px 0">' + accTile(a, 'sm') + '<span class="main"><span class="t">' + esc(a ? a.name : '') + '</span></span><span class="amt">' + money(Math.round(inv.by[k]), true) + '</span></div>'; }).join('') + '</div>';
+  if (si > 0) h += '<div class="rowsb small mute" style="font-weight:600;margin-top:8px"><span>Průměr ' + (sn < 12 ? 'za ' + sn + ' ' + pl(sn, 'měsíc', 'měsíce', 'měsíců') : 'za 12 měsíců') + '</span><span>' + Math.round(sv / si * 100) + '\u00a0% příjmů · ' + money(Math.round(sv / sn)) + ' měsíčně</span></div>';
+  h += '<p class="hint" style="margin:8px 0 0">Počítají se převody na investiční, penzijní a kryptoměnové účty, výběry z nich se odečítají.</p></section>';
+  var ids = Object.keys(bc).sort(function(a, b){ return (m.byCat[b] || 0) / bc[b] - (m.byCat[a] || 0) / bc[a]; });
+  if (ids.length) h += '<div class="card mt"><div class="ch2"><h2>Kategorie</h2><span class="r">utraceno z limitu</span></div>' + ids.map(function(k){
+    var c = cat(k), sp = Math.max(0, m.byCat[k] || 0), lim = bc[k], pp = sp / lim, lf = lim - sp;
+    return '<button class="brow" onclick="App.budgetForm()"><span class="top">' + catTile(c, 'sm') + '<span class="main"><span class="t">' + esc(c.name) + '</span><span class="s">' + money(Math.round(sp)) + ' z ' + money(lim) + '</span></span>' +
+      '<span class="amt" style="color:' + (lf < 0 ? 'var(--neg)' : 'inherit') + '">' + (lf >= 0 ? money(Math.round(lf)) : '−' + money(Math.round(-lf))) + '</span></span>' + bbar(pp, pace) + '</button>';
+  }).join('') + '</div>';
+  var free = Object.keys(m.byCat).filter(function(k){ return !bc[k] && m.byCat[k] > 0.5; }).sort(function(a, b){ return m.byCat[b] - m.byCat[a]; });
+  if (free.length && ids.length) h += '<div class="card mt"><div class="ch2"><h2>Bez limitu</h2><span class="r">' + money(Math.round(free.reduce(function(s, k){ return s + m.byCat[k]; }, 0))) + '</span></div>' + free.map(function(k){
+    var c = cat(k); return '<div class="row">' + catTile(c, 'sm') + '<span class="main"><span class="t">' + esc(c ? c.name : 'Bez kategorie') + '</span></span><span class="amt">' + money(Math.round(m.byCat[k])) + '</span></div>';
+  }).join('') + '</div>';
+  if (tot > 0) h += '<div class="pad" style="margin-top:14px"><button class="btn ghost" onclick="App.budgetForm()">Upravit rozpočet</button></div>';
+  return h;
+}
+function budgetAvg(){
+  var cur = curYM(), av = {}, n = 0, i;
+  for (i = 1; i <= 3; i++) { var s = monthStats(addMonths(cur, -i)); if (s.exp > 0) { n++; Object.keys(s.byCat).forEach(function(k){ av[k] = (av[k] || 0) + Math.max(0, s.byCat[k]); }); } }
+  Object.keys(av).forEach(function(k){ av[k] = n ? av[k] / n : 0; });
+  return av;
+}
+function budgetForm(){
+  var bc = S.budgets || {}, av = budgetAvg(), r100 = function(v){ return Math.max(100, Math.round(v / 100) * 100); };
+  openSheet('<form id="budf" onsubmit="App.saveBudget(event)" autocomplete="off"><div class="shead"><h3>Rozpočet</h3><button type="button" class="xbtn2" onclick="App.closeSheet()" aria-label="Zavřít">' + ic('x', 17, 2.4) + '</button></div>' +
+    '<p class="hint" style="margin:4px 2px 10px">Limity platí pro každý měsíc. Prázdné pole znamená kategorii bez limitu.</p>' +
+    '<label class="field"><span>Celkový měsíční rozpočet</span><input class="inp" name="total" inputmode="decimal" placeholder="součet limitů kategorií" value="' + (+S.budgetTotal > 0 ? S.budgetTotal : '') + '"></label>' +
+    '<div class="rowsb" style="margin:14px 2px 6px"><span class="lbl">Limity kategorií</span><button type="button" class="linkr" onclick="App.budgetFill()">Doplnit podle průměru</button></div>' +
+    '<div class="card">' + S.cats.expense.map(function(c){
+      var a = av[c.id] || 0;
+      return '<div class="row">' + catTile(c, 'sm') + '<span class="main"><span class="t">' + esc(c.name) + '</span><span class="s">' + (a ? 'Ø 3 měsíce ' + money(Math.round(a)) : 'bez útraty') + '</span></span>' +
+        '<input class="inp bin" data-cat="' + c.id + '" data-avg="' + (a ? r100(a) : '') + '" inputmode="decimal" placeholder="bez limitu" aria-label="Limit ' + esc(c.name) + '" value="' + (+bc[c.id] > 0 ? bc[c.id] : '') + '"></div>';
+    }).join('') + '</div><div class="mt"><button class="btn" type="submit">Uložit rozpočet</button></div></form>');
+}
+function budgetFill(){
+  var n = 0;
+  document.querySelectorAll('#budf .bin').forEach(function(i){ if (!i.value && i.getAttribute('data-avg')) { i.value = i.getAttribute('data-avg'); n++; } });
+  toast(n ? 'Doplněno ' + n + ' ' + pl(n, 'limit', 'limity', 'limitů') : 'Není co doplnit');
+}
+function saveBudget(e){
+  e.preventDefault();
+  var b = {};
+  document.querySelectorAll('#budf .bin').forEach(function(i){ var v = parseAmt(i.value); if (isFinite(v) && v > 0) b[i.getAttribute('data-cat')] = Math.round(v); });
+  var t = parseAmt(document.querySelector('#budf [name=total]').value);
+  S.budgets = b; S.budgetTotal = isFinite(t) && t > 0 ? Math.round(t) : null;
+  save(); closeSheet(); render(); toast('Rozpočet uložen');
+}
+function budMonth(d){ ui.budMonth = addMonths(ui.budMonth || curYM(), d); render(); }
+function goBudget(){ ui.budMonth = ui.txMonth; tab('budget'); }
+function budMonthGo(ym){ ui.budMonth = ym; tab('budget'); }
 
 /* ---------- helpers ---------- */
 function $(s){ return document.querySelector(s); }
@@ -2332,6 +2469,7 @@ function sampleData(){
   });
   tx(t,'expense',89,cash,{cat:E('Restaurace a kavárny'), note:'Kafe cestou'});
   tx(t,'expense',642,bank,{cat:E('Potraviny'), place:'Albert'});
+  s.budgets = {}; s.budgets[E('Potraviny')] = 9000; s.budgets[E('Restaurace a kavárny')] = 2500; s.budgets[E('Doprava')] = 3000; s.budgets[E('Zábava')] = 1000; s.budgets[E('Oblečení')] = 1500; s.budgets[E('Bydlení')] = 16500; s.budgets[E('Energie a služby')] = 3500; s.budgets[E('Předplatné')] = 900;
   s.lastAcc = bank;
   s.lastBackup = t;
   return s;
@@ -2347,7 +2485,7 @@ window.App = {tab:tab, addTx:addTx, editTx:editTx, setTxType:setTxType, pickCat:
   addCat:addCat, delCat:delCat, loadSample:loadSample, wipe:wipe,
   subForm:subForm, subDetail:subDetail, myPay:myPay, memberPay:memberPay, owedSheet:owedSheet, owedPay:owedPay, owedPayAll:owedPayAll, owedAll:owedAll,
   subCalc:subCalc, subAddMember:subAddMember, subDelMember:subDelMember, subSplit:subSplit, saveSub:saveSub, delSub:delSub, subIc:subIc,
-  amtIn:amtIn, refPick:refPick, refFilter:refFilter, refSet:refSet, refClear:refClear, refBack:refBack, setNativeKeys:setNativeKeys, accPick:accPick, accSet:accSet, closeAcc:closeAcc, reopenAcc:reopenAcc, statListToggle:statListToggle, assetFilter:assetFilter, back:back, goStats:goStats, setMonth:setMonth, useTpl:useTpl, fetchRates:fetchRates, setRate:setRate, accCurChange:accCurChange, txPlace:txPlace, placeIn:placeIn, pickPlace:pickPlace};
+  amtIn:amtIn, refPick:refPick, refFilter:refFilter, refSet:refSet, refClear:refClear, refBack:refBack, setNativeKeys:setNativeKeys, accPick:accPick, accSet:accSet, closeAcc:closeAcc, reopenAcc:reopenAcc, goBudget:goBudget, budMonth:budMonth, budMonthGo:budMonthGo, budgetForm:budgetForm, budgetFill:budgetFill, saveBudget:saveBudget, statListToggle:statListToggle, assetFilter:assetFilter, back:back, goStats:goStats, setMonth:setMonth, useTpl:useTpl, fetchRates:fetchRates, setRate:setRate, accCurChange:accCurChange, txPlace:txPlace, placeIn:placeIn, pickPlace:pickPlace};
 
 testStorage();
 S = load();

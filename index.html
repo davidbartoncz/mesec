@@ -400,6 +400,20 @@ nav.tabs .plus{justify-self:center;width:54px;height:54px;border-radius:27px;bac
 .bcard{appearance:none;display:block;width:calc(100% - 32px);margin:10px 16px 0;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:26px;padding:14px 18px 16px;color:var(--ink)}
 .bcard .tiles3{margin-top:12px}
 
+.mseg{margin:0 16px 10px}
+.gtag{display:inline-flex;align-items:center;gap:3px;margin-right:6px;padding:1px 7px 1px 5px;border-radius:8px;background:var(--elev);color:var(--ink);font-size:11px;font-weight:700;vertical-align:1px}
+.prow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:7px 0;border-top:1px solid var(--line);font-size:13px;font-weight:600}
+.prow:first-of-type{border-top:0}
+.prow span{display:flex;align-items:center;gap:8px;min-width:0}
+.prow small{color:var(--mut);font-weight:600;font-size:11px}
+.prow i{width:9px;height:9px;border-radius:5px;display:inline-block;flex:none}
+.prow b{font-weight:800;white-space:nowrap}
+.prow.tot{font-size:14px;font-weight:800}
+.dotk{width:10px;height:10px;border-radius:5px;flex:none}
+.pname{flex:1;font-weight:700}
+.mrow .inp.pn{flex:1;min-width:0}
+.row.pick .chk{width:24px;height:24px;border-radius:12px;border:1.5px solid var(--line);display:grid;place-items:center;color:transparent;flex:none}
+.row.pick.on .chk{background:var(--acc);border-color:var(--acc);color:var(--onacc)}
 </style>
 </head>
 <body>
@@ -500,6 +514,7 @@ var ICONS = {
   assets:'M3 6h18v14H3zM3 10.5h18M15.5 15h2.5M6 6l9-3 1 3',
   download:'M12 4v11M7 10l5 5 5-5M5 20h14',
   check:'M5 12.5l4.5 4.5L19 7',
+  folder:'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z',
   homei:'M4 11l8-7 8 7v8a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1z',
   chevD:'M6 9l6 6 6-6',
   note:'M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4',
@@ -724,7 +739,7 @@ function backupNotice(){
   if (since !== null && since < 14) return '';
   return '<div class="notice">' + ic('warn', 20) + '<span class="tx">' + (since === null ? 'Zatím žádná záloha.' : 'Poslední záloha před ' + since + ' dny.') + '</span><button class="nb" onclick="App.exportJSON()">Zálohovat</button></div>';
 }
-function txRow(t, ctx){
+function txRowBase(t, ctx){
   var a = acc(t.acc), tile, title, sub, amt, col = '', c;
   if (t.type === 'transfer') {
     var b = acc(t.to), inn = ctx && t.to === ctx;
@@ -911,7 +926,7 @@ function spendCard(ym){
     if (x.end) return;
     dues(x, monthEnd(ym)).forEach(function(d){ if (d.slice(0, 7) === ym && d >= t && !myTx(x.id, d)) due += (+x.amount || 0) * fxNow(accCur(acc(x.acc))); });
   });
-  var free = m.inc - m.exp - due;
+  var free = m.inc - m.exp - due - investedIn(ym).v;
   return '<section class="hcard"><div class="rowsb"><label class="pillbtn">' + ymLabel(ym) + ic('chevD', 14, 2.4) + '<input type="month" aria-label="Vybrat měsíc" value="' + ym + '" onchange="if(this.value)App.setMonth(this.value)"></label>' +
     '<button class="linkr" onclick="App.goStats()">Rozbor' + ic('chevR', 14, 2.4) + '</button></div>' +
     '<div class="lbl" style="margin-top:10px">' + (si.cur ? 'Utraceno tento měsíc' : 'Utraceno') + '</div>' +
@@ -921,7 +936,7 @@ function spendCard(ym){
     '<div><div class="k">Ještě odejde</div>' + tv(money(Math.round(due))) + '</div>' +
     '<div class="accent"><div class="k">Volné</div>' + tv(money(Math.round(free))) + '</div></div></section>';
 }
-function homeTodos(){
+function homeTodosBase(){
   var t = today(), out = [], lim = new Date(); lim.setDate(lim.getDate() + 1);
   var limS = fmtD(lim);
   (S.subs || []).forEach(function(x){
@@ -958,7 +973,7 @@ function upcomingHtml(){
     return '<div class="row">' + o.tile + '<span class="main"><span class="t">' + o.title + '</span><span class="s">' + o.sub + '</span></span>' + (o.btn ? '<button class="actb" onclick="' + o.act + '">' + o.btn + '</button>' : '') + '</div>';
   }).join('') + '</div>';
 }
-function homeBudget(){
+function homeBudgetBase(){
   var ym = ui.txMonth, o = budgetPace(ym), mm = monthStats(ym), inv = investedIn(ym), ow = owed(), owTot = ow.reduce(function(sm, x){ return sm + x.total; }, 0);
   var h;
   if (o) {
@@ -986,7 +1001,7 @@ function vHome(){
   return h;
 }
 function vTx(){
-  var acts = '<button class="iconbtn" onclick="App.goStats()" aria-label="Rozbor měsíce">' + ic('stats', 19, 2) + '</button>';
+  var acts = '<button class="iconbtn" onclick="App.tab(\'groups\')" aria-label="Skupiny výdajů">' + ic('folder', 19, 2) + '</button><button class="iconbtn" onclick="App.goStats()" aria-label="Rozbor měsíce">' + ic('stats', 19, 2) + '</button>';
   if (!S.accounts.length) return hdr('Pohyby') + vEmptyBody();
   return hdr('Pohyby', acts) +
     '<label class="searchf">' + ic('search', 18, 2) + '<input id="q" type="search" placeholder="Hledat poznámku, místo, kategorii, účet" value="' + esc(ui.q) + '" oninput="App.search(this.value)" aria-label="Hledat v pohybech"></label>' +
@@ -997,7 +1012,7 @@ function txListHtml(){
   if (q) {
     items = S.tx.filter(function(t){
       var c = cat(t.cat), a = acc(t.acc), b = acc(t.to), sx = t.sub ? subById(t.sub) : null;
-      return [t.note, t.place, c && c.name, a && a.name, b && b.name, sx && sx.name, String(t.amount)].some(function(s){ return s && String(s).toLowerCase().indexOf(q) >= 0; });
+      return [t.note, t.place, c && c.name, a && a.name, b && b.name, sx && sx.name, t.grp && grpById(t.grp) && grpById(t.grp).name, String(t.amount)].some(function(s){ return s && String(s).toLowerCase().indexOf(q) >= 0; });
     });
   } else {
     items = S.tx.filter(function(t){ return t.date.slice(0, 7) === ui.txMonth; });
@@ -1036,7 +1051,7 @@ function monthStatsUpTo(ym, day){
   });
   return m;
 }
-function vStats(){
+function vStatsMonth(){
   var ym = ui.statMonth, m = monthStats(ym), i, cur = curYM();
   var nm = MONTHS[+ym.slice(5, 7) - 1]; nm = nm[0].toUpperCase() + nm.slice(1) + (ym.slice(0, 4) !== cur.slice(0, 4) ? ' ' + ym.slice(2, 4) : '');
   var sw = '<div class="mswitch"><button onclick="App.month(\'stat\',-1)" aria-label="Předchozí měsíc">' + ic('chevL', 15, 2.4) + '</button><span>' + nm + '</span><button onclick="App.month(\'stat\',1)" aria-label="Další měsíc"' + (ym >= cur ? ' style="opacity:.35"' : '') + '>' + ic('chevR', 15, 2.4) + '</button></div>';
@@ -1428,15 +1443,15 @@ function render(){
   charts = {}; fxCache = {};
   DARK = !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
   var v = ui.view;
-  var hv = (v === 'stats' || v === 'settings' || v === 'budget') ? ui.prev : v;
+  var hv = (v === 'stats' || v === 'settings' || v === 'budget' || v === 'groups') ? ui.prev : v;
   document.querySelectorAll('nav.tabs button[data-v]').forEach(function(b){ var on = b.getAttribute('data-v') === hv; b.classList.toggle('on', on); if (on) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
-  var fn = {home:vHome, tx:vTx, stats:vStats, subs:vSubs, assets:vAssets, settings:vSettings, budget:vBudget}[v] || vHome;
+  var fn = {home:vHome, tx:vTx, stats:vStats, subs:vSubs, assets:vAssets, settings:vSettings, budget:vBudget, groups:vGroups}[v] || vHome;
   $('#view').innerHTML = '<div class="glow" aria-hidden="true"></div>' + fn();
   bindCharts($('#view'));
 }
 function tab(v){
   if (v !== ui.view) ui.reveal = false;
-  var sec = {stats:1, settings:1, budget:1};
+  var sec = {stats:1, settings:1, budget:1, groups:1};
   if (sec[v] && !sec[ui.view]) ui.prev = ui.view;
   ui.view = v; render(); window.scrollTo(0, 0);
 }
@@ -1548,6 +1563,8 @@ function txSheet(){
   if (d.type !== 'transfer') h += '<button class="pchip" onclick="App.accPick(\'acc\')" aria-label="Účet">' + (A ? ic(tinfo(A).ic, 14, 2.2) : ic('wallet', 14, 2.2)) + '<span>' + esc(A ? A.name : 'Účet') + '</span></button>';
   h += '<label class="pchip" style="flex:none">' + ic('calendar', 14, 2.2) + '<span id="dateLbl">' + dateLbl(d.date) + '</span><input type="date" aria-label="Datum" value="' + esc(d.date) + '" onchange="App.txSet(\'date\',this.value)"></label>';
   if (hasPlace) h += '<button class="pchip dash' + (d.place ? ' on' : ' ic') + '" onclick="App.txPlace()" aria-label="Místo nákupu">' + ic('pin', 15, 2.2) + (d.place ? '<span>' + esc(d.place) + '</span>' : '') + '</button>';
+  var gsel = d.grp ? grpById(d.grp) : null;
+  if (d.type !== 'transfer' && d.type !== 'reval') h += '<button class="pchip dash' + (gsel ? ' on' : ' ic') + '" onclick="App.grpPick()" aria-label="Skupina">' + ic('folder', 15, 2.2) + (gsel ? '<span>' + esc(gsel.name) + '</span>' : '') + '</button>';
   h += '<button class="pchip dash' + (d.note ? ' on' : (hasPlace ? ' ic' : '')) + '" onclick="App.txNote()" aria-label="Poznámka">' + ic('note', 14, 2.2) + (d.note ? '<span>' + esc(d.note) + '</span>' : (hasPlace ? '' : '<span>Poznámka</span>')) + '</button>';
   if (isR) h += '<button class="pchip ic" onclick="App.txSign()" aria-label="Změnit znaménko">±</button>';
   h += '</div>';
@@ -1769,7 +1786,7 @@ function paceTiles(o, mon){
     '<div class="accent"><div class="k">Tento týden zbývá</div><div class="v"' + (o.week.left < 0 ? ' style="color:var(--neg)"' : '') + '>' + money(Math.round(o.week.left)) + '</div></div></div>' +
     '<div class="rowsb small mute" style="font-weight:600;margin-top:8px"><span>Týden ' + o.week.from + '.–' + o.week.to + '. ' + mon + '.: utraceno ' + money(Math.round(o.week.spent)) + '</span><span>z ' + money(Math.floor(o.week.budget)) + '</span></div>';
 }
-function vBudget(){
+function vBudgetBase(){
   var ym = ui.budMonth || curYM(), cur = curYM(), m = monthStats(ym), tot = budgetTotal(), bc = budgetCats(), pace = monthPace(ym);
   var nm = MONTHS[+ym.slice(5, 7) - 1]; nm = nm[0].toUpperCase() + nm.slice(1) + (ym.slice(0, 4) !== cur.slice(0, 4) ? ' ' + ym.slice(2, 4) : '');
   var sw = '<div class="mswitch"><button onclick="App.budMonth(-1)" aria-label="Předchozí měsíc">' + ic('chevL', 15, 2.4) + '</button><span>' + nm + '</span><button onclick="App.budMonth(1)" aria-label="Další měsíc"' + (ym >= cur ? ' style="opacity:.35"' : '') + '>' + ic('chevR', 15, 2.4) + '</button></div>';
@@ -2243,6 +2260,7 @@ function defaultAcc(){
 function addTx(type){
   if (!S.accounts.length) { toast('Nejdřív je potřeba přidat účet.'); accForm(); return; }
   draft = {id:null, type:type || 'expense', amount:'', acc:defaultAcc(), to:'', cat:'', date:today(), note:''};
+  if (S.activeGroup && grpById(S.activeGroup)) draft.grp = S.activeGroup;
   txSheet();
 }
 
@@ -2269,6 +2287,7 @@ function saveTx(e){
   if (d.sub) { t.sub = d.sub; t.due = d.due; if (d.member) t.member = d.member; }
   if (d.type === 'refund' && d.ref && !d.sub) t.ref = d.ref;
   if ((d.type === 'expense' || d.type === 'refund') && (d.place || '').trim()) t.place = d.place.trim();
+  if (d.grp && d.type !== 'reval' && d.type !== 'transfer' && grpById(d.grp)) t.grp = d.grp;
   var idx = -1;
   S.tx.forEach(function(x,i){ if (x.id === t.id) idx = i; });
   if (idx >= 0) S.tx[idx] = t; else S.tx.push(t);
@@ -2508,8 +2527,339 @@ function sampleData(){
 }
 
 
+
+/* ---------- expense groups (e.g. a trip) ---------- */
+function grpById(id){ return (S.groups || []).filter(function(g){ return g.id === id; })[0] || null; }
+function grpTx(id){ return S.tx.filter(function(t){ if (t.grp === id) return true; if (t.type === 'refund' && !t.grp) { var r = refTx(t); return !!(r && r.grp === id); } return false; }); }
+function grpStats(id){
+  var r = {exp:0, inc:0, n:0, from:'', to:'', byCat:{}};
+  grpTx(id).forEach(function(t){
+    var v = czk(t), k = t.cat || 'none';
+    if (t.type === 'expense') { r.exp += v; r.n++; r.byCat[k] = (r.byCat[k] || 0) + v; }
+    else if (t.type === 'refund') { r.exp -= v; r.byCat[k] = (r.byCat[k] || 0) - v; }
+    else if (t.type === 'income') r.inc += v;
+    else return;
+    if (!r.from || t.date < r.from) r.from = t.date;
+    if (t.date > r.to) r.to = t.date;
+  });
+  return r;
+}
+function grpRange(r){
+  if (!r.from) return 'zatím bez pohybů';
+  var f = parseD(r.from), t = parseD(r.to), sy = f.getFullYear() === t.getFullYear();
+  if (r.from === r.to) return dShort(r.from);
+  return f.getDate() + '. ' + (f.getMonth() + 1) + '.' + (sy ? '' : ' ' + f.getFullYear()) + ' – ' + dShort(r.to);
+}
+function grpTile(g, cls){
+  var cols = ['var(--cb)','var(--cg)','var(--co)','var(--cv)','var(--cr)','var(--ct)','var(--ca)'];
+  return tileHtml(cols[hashStr(g.name.toLowerCase()) % cols.length], ic('folder', cls === 'sm' ? 16 : 19), cls);
+}
+function grpSorted(){
+  return (S.groups || []).map(function(g){ return {g:g, st:grpStats(g.id)}; }).sort(function(a, b){
+    if ((a.g.id === S.activeGroup) !== (b.g.id === S.activeGroup)) return a.g.id === S.activeGroup ? -1 : 1;
+    var x = a.st.to || a.g.created || '', y = b.st.to || b.g.created || ''; return x < y ? 1 : x > y ? -1 : 0;
+  });
+}
+function grpRow(o){
+  return '<button class="row" onclick="App.grpDetail(\'' + o.g.id + '\')">' + grpTile(o.g) + '<span class="main"><span class="t">' + esc(o.g.name) + (o.g.id === S.activeGroup ? ' <span class="badge" style="padding:2px 7px;font-size:10px">aktivní</span>' : '') + '</span>' +
+    '<span class="s">' + grpRange(o.st) + (o.st.n ? ' · ' + o.st.n + ' ' + pl(o.st.n, 'výdaj', 'výdaje', 'výdajů') : '') + '</span></span><span class="amt">' + money(Math.round(o.st.exp)) + '</span></button>';
+}
+function vGroups(){
+  var h = hdr('Skupiny', '<button class="iconbtn" onclick="App.grpForm()" aria-label="Nová skupina">' + ic('plus', 19, 2.4) + '</button>', true);
+  var list = grpSorted();
+  if (!list.length) return h + '<div class="empty" style="padding-bottom:18px">Skupina spojí výdaje z různých kategorií, třeba výlet, dovolenou nebo rekonstrukci, a ukáže jejich součet.</div><div class="pad"><button class="btn" onclick="App.grpForm()">Vytvořit skupinu</button></div>';
+  return h + '<div class="card">' + list.map(grpRow).join('') + '</div>';
+}
+function groupsCard(){
+  var list = grpSorted().slice(0, 3); if (!list.length) return '';
+  return '<div class="card mt"><div class="ch2"><h2>Skupiny</h2><button class="link" onclick="App.tab(\'groups\')">Vše</button></div>' + list.map(grpRow).join('') + '</div>';
+}
+function grpDetail(id){
+  var g = grpById(id); if (!g) { closeSheet(); render(); return; }
+  var st = grpStats(id), items = grpTx(id).sort(sortTx);
+  var list = Object.keys(st.byCat).map(function(k){ return {c:cat(k), v:st.byCat[k]}; }).filter(function(x){ return x.v > 0.5; }).sort(function(a, b){ return b.v - a.v; });
+  var tot = list.reduce(function(s, x){ return s + x.v; }, 0);
+  openSheet('<div class="shead"><h3>' + grpTile(g) + '<span class="nm">' + esc(g.name) + '</span></h3><button class="xbtn2" onclick="App.closeSheet()" aria-label="Zavřít">' + ic('x', 17, 2.4) + '</button></div>' +
+    '<div class="sub">' + grpRange(st) + (st.n ? ' · ' + st.n + ' ' + pl(st.n, 'výdaj', 'výdaje', 'výdajů') : '') + '</div>' +
+    '<div class="bigv">' + money(Math.round(st.exp)) + '</div>' + (st.inc > 0.5 ? '<div class="sub">Příjmy ve skupině ' + money(Math.round(st.inc), true) + ' · celkem ' + money(Math.round(st.inc - st.exp), true) + '</div>' : '') +
+    '<label class="toggle"><input type="checkbox"' + (S.activeGroup === id ? ' checked' : '') + ' onchange="App.grpActive(\'' + id + '\',this.checked)"><span>Přidávat nové pohyby do této skupiny</span></label>' +
+    (list.length ? '<div class="card" style="padding:12px 16px 4px"><div class="sbar" style="margin-bottom:6px" role="img" aria-label="Výdaje skupiny podle kategorií">' + list.map(function(x){ return '<i style="flex:' + x.v.toFixed(2) + ';background:' + catStyle(x.c).col + '"></i>'; }).join('') + '</div>' +
+      list.map(function(x){ return '<div class="catrow">' + catTile(x.c, 'sm') + '<span class="main"><span class="n">' + esc(x.c ? x.c.name : 'Bez kategorie') + '</span><span class="p">' + Math.round(x.v / tot * 100) + '\u00a0%</span></span><span class="rt"><span class="a">' + money(Math.round(x.v)) + '</span></span></div>'; }).join('') + '</div>' : '') +
+    '<div class="btnrow"><button class="btn" onclick="App.grpAdd(\'' + id + '\')">Přidat pohyby</button><button class="btn ghost" onclick="App.grpForm(\'' + id + '\')">Upravit</button></div>' +
+    '<div class="sh"><h2>Pohyby</h2><span class="r">' + items.length + '</span></div>' + (items.length ? '<div class="card">' + items.map(function(t){ return txRow(t); }).join('') + '</div>' : '<div class="empty" style="padding:16px">Žádné pohyby</div>') +
+    '<button class="linkbtn" onclick="App.delGrp(\'' + id + '\')">Smazat skupinu</button>');
+}
+function grpForm(id){
+  var g = id ? grpById(id) : null;
+  openSheet('<form id="grpf" onsubmit="App.saveGrp(event,\'' + (id || '') + '\')" autocomplete="off"><div class="shead"><h3>' + (g ? 'Upravit skupinu' : 'Nová skupina') + '</h3><button type="button" class="xbtn2" onclick="App.closeSheet()" aria-label="Zavřít">' + ic('x', 17, 2.4) + '</button></div>' +
+    '<label class="field"><span>Název</span><input class="inp" name="nm" required value="' + esc(g ? g.name : '') + '" placeholder="např. Výlet Praha"></label>' +
+    '<label class="toggle"><input type="checkbox" name="act"' + (!g || S.activeGroup === id ? ' checked' : '') + '><span>Přidávat nové pohyby do této skupiny</span></label>' +
+    '<p class="hint">Aktivní může být jedna skupina. Nové výdaje se do ní přiřadí samy, dokud se přepínač nevypne.</p>' +
+    '<button class="btn" type="submit">' + (g ? 'Uložit' : 'Vytvořit skupinu') + '</button></form>', function(){ if (!g) setTimeout(function(){ var i = document.querySelector('#grpf [name=nm]'); if (i) i.focus(); }, 60); });
+}
+function saveGrp(e, id){
+  e.preventDefault();
+  var f = e.target.elements, name = f.nm.value.trim(); if (!name) { toast('Chybí název.'); return; }
+  S.groups = S.groups || [];
+  var g = id ? grpById(id) : null;
+  if (g) g.name = name; else { g = {id:uid(), name:name, created:today()}; S.groups.push(g); }
+  if (f.act.checked) S.activeGroup = g.id; else if (S.activeGroup === g.id) S.activeGroup = null;
+  save(); render(); grpDetail(g.id); toast(id ? 'Uloženo' : 'Skupina vytvořena');
+}
+function delGrp(id){
+  if (!confirm('Smazat skupinu? Pohyby zůstanou, jen se z nich odebere označení.')) return;
+  S.groups = (S.groups || []).filter(function(g){ return g.id !== id; });
+  S.tx.forEach(function(t){ if (t.grp === id) delete t.grp; });
+  if (S.activeGroup === id) S.activeGroup = null;
+  save(); closeSheet(); render(); toast('Skupina smazána');
+}
+function grpActive(id, on){
+  if (on) S.activeGroup = id; else if (S.activeGroup === id) S.activeGroup = null;
+  save(); render(); toast(on ? 'Nové pohyby se přidají do skupiny' : 'Skupina už není aktivní');
+}
+function grpAdd(id){
+  var g = grpById(id); if (!g) return;
+  var lim = fmtD(new Date(Date.now() - 150 * 864e5));
+  var items = S.tx.filter(function(t){ return (t.type === 'expense' || t.type === 'refund' || t.type === 'income') && (t.date >= lim || t.grp === id); }).sort(sortTx).slice(0, 150);
+  openSheet('<div class="shead"><h3>Přidat do skupiny</h3><button class="xbtn2" onclick="App.grpDetail(\'' + id + '\')" aria-label="Hotovo">' + ic('check', 18, 2.6) + '</button></div>' +
+    '<div class="sub">' + esc(g.name) + ' · klepnutím pohyb přidáš nebo odebereš</div>' +
+    '<div class="card mt">' + items.map(function(t){
+      var c = cat(t.cat), on = t.grp === id, other = t.grp && t.grp !== id ? grpById(t.grp) : null;
+      return '<button class="row pick' + (on ? ' on' : '') + '" id="gp-' + t.id + '" onclick="App.grpToggleTx(\'' + id + '\',\'' + t.id + '\')">' + catTile(c, 'sm') + '<span class="main"><span class="t">' + esc(t.place || t.note || (c ? c.name : '')) + '</span><span class="s">' + esc([dShort(t.date), c && (t.place || t.note) ? c.name : '', other ? 've skupině ' + other.name : ''].filter(Boolean).join(' · ')) + '</span></span>' +
+        '<span class="amt">' + (t.type === 'expense' ? moneyC(-t.amount, accCur(acc(t.acc))) : moneyC(t.amount, accCur(acc(t.acc)), true)) + '</span><span class="chk" aria-hidden="true">' + ic('check', 14, 3) + '</span></button>';
+    }).join('') + '</div><div class="mt"><button class="btn" onclick="App.grpDetail(\'' + id + '\')">Hotovo</button></div>');
+}
+function grpToggleTx(id, txid){
+  var t = S.tx.filter(function(x){ return x.id === txid; })[0]; if (!t) return;
+  if (t.grp === id) delete t.grp; else t.grp = id;
+  save();
+  var el = document.getElementById('gp-' + txid); if (el) el.classList.toggle('on', t.grp === id);
+}
+function grpPick(){
+  readDraft();
+  var list = grpSorted();
+  var h = '<div class="shead"><h3>Skupina</h3><button class="xbtn2" onclick="App.refBack()" aria-label="Zpět">' + ic('chevL', 18, 2.4) + '</button></div>' +
+    '<div class="card mt"><button class="row" onclick="App.grpSet(\'\')">' + tileHtml('var(--cn)', ic('x', 16, 2.2), 'sm') + '<span class="main"><span class="t">Bez skupiny</span></span>' + (!draft.grp ? ic('check', 20, 2.6) : '') + '</button>' +
+    list.map(function(o){ return '<button class="row" onclick="App.grpSet(\'' + o.g.id + '\')">' + grpTile(o.g, 'sm') + '<span class="main"><span class="t">' + esc(o.g.name) + '</span><span class="s">' + money(Math.round(o.st.exp)) + ' · ' + grpRange(o.st) + '</span></span>' + (draft.grp === o.g.id ? '<span class="pos">' + ic('check', 20, 2.6) + '</span>' : '') + '</button>'; }).join('') + '</div>' +
+    '<div class="addrow" style="margin-top:12px"><input class="inp" id="grpNew" placeholder="Nová skupina, např. Výlet Praha" aria-label="Název nové skupiny"><button class="btn sm" onclick="App.grpNewInline()">Vytvořit</button></div>';
+  openSheet(h, null, true);
+}
+function grpSet(id){ draft.grp = id || ''; draft.noFocus = true; txSheet(); }
+function grpNewInline(){
+  var i = document.getElementById('grpNew'), v = i ? i.value.trim() : ''; if (!v) { toast('Chybí název.'); return; }
+  S.groups = S.groups || []; var g = {id:uid(), name:v, created:today()}; S.groups.push(g); save(); grpSet(g.id);
+}
+function txRow(t, ctx){
+  var h = txRowBase(t, ctx), g = t.grp ? grpById(t.grp) : null;
+  return g ? h.replace('<span class="s">', '<span class="s"><span class="gtag">' + ic('folder', 11, 2.4) + esc(g.name) + '</span>') : h;
+}
+
+/* ---------- payday plan ---------- */
+function planOf(ym){ var p = (S.plans || {})[ym]; return p && !p.skip ? p : null; }
+function savedIn(ym){
+  var v = 0;
+  S.tx.forEach(function(t){
+    if (t.type !== 'transfer' || t.date.slice(0, 7) !== ym) return;
+    var a = acc(t.acc), b = acc(t.to), sa = a && a.type === 'savings', sb = b && b.type === 'savings';
+    if (sb && !sa) v += czk(t); else if (sa && !sb) v -= czk(t);
+  });
+  return v;
+}
+function planCalc(ym){
+  var p = planOf(ym); if (!p) return null;
+  var m = monthStats(ym), inc = Math.max(+p.income || 0, m.inc), bud = budgetTotal(), items = p.items || [];
+  var planned = items.reduce(function(s, x){ return s + (+x.amount || 0); }, 0);
+  return {p:p, inc:inc, actual:m.inc, expected:+p.income || 0, bud:bud, items:items, planned:planned, free:inc - bud - planned, done:{invest:investedIn(ym).v, save:savedIn(ym)}};
+}
+var PLANCOL = {invest:'var(--pos)', save:'var(--cb)', other:'var(--cv)'};
+function planBar(c){
+  if (!(c.inc > 0)) return '';
+  var parts = [[c.bud, 'var(--cn)']].concat(c.items.map(function(x){ return [+x.amount || 0, PLANCOL[x.kind] || PLANCOL.other]; })).concat([[Math.max(0, c.free), 'var(--acc)']]);
+  return '<div class="sbar" role="img" aria-label="Rozdělení příjmů podle plánu">' + parts.filter(function(x){ return x[0] > 0; }).map(function(x){ return '<i style="flex:' + x[0].toFixed(2) + ';background:' + x[1] + '"></i>'; }).join('') + '</div>';
+}
+function planCard(ym){
+  var c = planCalc(ym), mn = MONTHS[+ym.slice(5, 7) - 1];
+  var h = '<section class="hcard mt"><div class="rowsb"><span class="lbl">Plán z výplaty · ' + mn + '</span>' + (c ? '<button class="linkr" onclick="App.planForm()">Upravit' + ic('chevR', 14, 2.4) + '</button>' : '') + '</div>';
+  if (!c) return h + '<p class="note" style="margin:6px 0 12px">Rozdělení příjmů měsíce na rozpočet výdajů, investice, spoření a další položky. Co zbude, je nerozpočtované.</p><button class="btn" onclick="App.planForm()">Naplánovat</button></section>';
+  h += '<div class="rowbl" style="margin-top:2px"><div class="bignum md"' + (c.free < 0 ? ' style="color:var(--neg)"' : '') + '>' + (c.free < 0 ? '−' : '') + NF.format(Math.round(Math.abs(c.free))) + '<span class="cur" style="font-size:15px">' + (c.free < 0 ? 'naplánováno navíc' : 'nerozpočtováno') + '</span></div></div>';
+  h += '<div style="margin:12px 0 6px">' + planBar(c) + '</div>';
+  h += '<div class="prow"><span><i style="background:transparent;border:1.5px solid var(--mut)"></i>Příjmy' + (c.expected > c.actual ? ' <small>očekávané, připsáno ' + money(Math.round(c.actual)) + '</small>' : '') + '</span><b class="pos">' + money(Math.round(c.inc), true) + '</b></div>';
+  h += '<div class="prow"><span><i style="background:var(--cn)"></i>Rozpočet výdajů' + (c.bud > 0 ? '' : ' <small>nenastaven</small>') + '</span><b>' + money(-Math.round(c.bud)) + '</b></div>';
+  var shown = {};
+  c.items.forEach(function(x){
+    var note = '';
+    if ((x.kind === 'invest' || x.kind === 'save') && !shown[x.kind]) {
+      shown[x.kind] = 1;
+      var tgt = c.items.filter(function(y){ return y.kind === x.kind; }).reduce(function(s, y){ return s + (+y.amount || 0); }, 0), dn = c.done[x.kind];
+      note = ' <small>' + (dn >= tgt - 0.5 ? '✓ převedeno' : 'převedeno ' + money(Math.max(0, Math.round(dn)))) + '</small>';
+    }
+    h += '<div class="prow"><span><i style="background:' + (PLANCOL[x.kind] || PLANCOL.other) + '"></i>' + esc(x.name) + note + '</span><b>' + money(-Math.round(+x.amount || 0)) + '</b></div>';
+  });
+  h += '<div class="prow tot"><span><i style="background:var(--acc)"></i>Nerozpočtováno</span><b' + (c.free < 0 ? ' class="neg"' : '') + '>' + money(Math.round(c.free)) + '</b></div>';
+  return h + '</section>';
+}
+function planForm(){
+  var ym = ui.budMonth && ui.view === 'budget' ? ui.budMonth : curYM(), p = (S.plans || {})[ym], m = monthStats(ym);
+  var prev = planOf(addMonths(ym, -1));
+  var items = p && p.items ? JSON.parse(JSON.stringify(p.items)) : prev ? JSON.parse(JSON.stringify(prev.items)) : [{kind:'invest', name:'Investice', amount:Math.max(0, Math.round(investedIn(addMonths(ym, -1)).v / 100) * 100) || ''}, {kind:'save', name:'Spoření', amount:Math.max(0, Math.round(savedIn(addMonths(ym, -1)) / 100) * 100) || ''}];
+  if (!items.some(function(x){ return x.kind === 'invest'; })) items.unshift({kind:'invest', name:'Investice', amount:''});
+  if (!items.some(function(x){ return x.kind === 'save'; })) items.splice(1, 0, {kind:'save', name:'Spoření', amount:''});
+  ui.pd = {ym:ym, income:p && p.income ? p.income : '', items:items};
+  planSheet();
+}
+function planSheet(){
+  var d = ui.pd, m = monthStats(d.ym), mn = MONTHS[+d.ym.slice(5, 7) - 1];
+  var rows = d.items.map(function(x, i){
+    var fixed = x.kind === 'invest' || x.kind === 'save';
+    return '<div class="mrow"><span class="dotk" style="background:' + (PLANCOL[x.kind] || PLANCOL.other) + '"></span>' +
+      (fixed ? '<span class="pname">' + esc(x.name) + '</span>' : '<input class="inp pn" value="' + esc(x.name) + '" placeholder="Název, např. Dovolená" aria-label="Název položky">') +
+      '<input class="inp share pa" inputmode="decimal" value="' + esc(String(x.amount || '')) + '" placeholder="0" aria-label="Částka" oninput="App.planCalcLive()">' +
+      (fixed ? '<span style="width:46px;flex:none"></span>' : '<button type="button" class="xbtn" onclick="App.planDelRow(' + i + ')" aria-label="Odebrat">×</button>') + '</div>';
+  }).join('');
+  openSheet('<form id="planf" onsubmit="App.savePlan(event)" autocomplete="off"><div class="shead"><h3>Plán z výplaty</h3><button type="button" class="xbtn2" onclick="App.closeSheet()" aria-label="Zavřít">' + ic('x', 17, 2.4) + '</button></div>' +
+    '<div class="sub">' + mn[0].toUpperCase() + mn.slice(1) + ' ' + d.ym.slice(0, 4) + '</div>' +
+    '<label class="field"><span>Příjmy měsíce</span><input class="inp" name="income" inputmode="decimal" placeholder="' + NF.format(Math.round(m.inc)) + '" value="' + esc(String(d.income || '')) + '" oninput="App.planCalcLive()"></label>' +
+    '<p class="hint">Připsáno zatím ' + money(Math.round(m.inc)) + '. Očekávanou výplatu lze zadat předem, počítá se vyšší z obou částek.</p>' +
+    '<div class="prow" style="padding:4px 2px 8px"><span><i style="background:var(--cn)"></i>Rozpočet výdajů</span><b>' + (budgetTotal() > 0 ? money(-Math.round(budgetTotal())) : '<button type="button" class="linkr" onclick="App.budgetForm()">Nastavit limity</button>') + '</b></div>' +
+    '<div class="lbl" style="margin:6px 2px 0">Další položky plánu</div>' + rows +
+    '<div class="btns2"><button type="button" class="btn ghost sm" onclick="App.planAddRow()">+ Přidat položku</button></div>' +
+    '<div class="prow tot" style="margin-top:14px"><span><i style="background:var(--acc)"></i>Nerozpočtováno</span><b id="planFree"></b></div>' +
+    '<div class="mt"><button class="btn" type="submit">Uložit plán</button></div>' +
+    ((S.plans || {})[d.ym] && !(S.plans[d.ym].skip) ? '<button type="button" class="linkbtn" onclick="App.planDel()">Smazat plán</button>' : '<button type="button" class="linkbtn" style="color:var(--mut)" onclick="App.planSkip()">Tento měsíc bez plánu</button>') +
+    '</form>', function(){ planCalcLive(); });
+}
+function readPlan(){
+  var f = document.getElementById('planf'); if (!f || !ui.pd) return;
+  ui.pd.income = f.elements.income.value;
+  f.querySelectorAll('.mrow').forEach(function(r, i){ var n = r.querySelector('.pn'), a = r.querySelector('.pa'); if (n) ui.pd.items[i].name = n.value; ui.pd.items[i].amount = a.value; });
+}
+function planCalcLive(){
+  readPlan();
+  var d = ui.pd, m = monthStats(d.ym), inc = Math.max(parseAmt(d.income) || 0, m.inc);
+  var planned = d.items.reduce(function(s, x){ var v = parseAmt(x.amount); return s + (isFinite(v) ? v : 0); }, 0);
+  var free = inc - budgetTotal() - planned, el = document.getElementById('planFree');
+  if (el) { el.textContent = money(Math.round(free)).replace(/&nbsp;/g, '\u00a0'); el.className = free < 0 ? 'neg' : ''; }
+}
+function planAddRow(){ readPlan(); ui.pd.items.push({kind:'other', name:'', amount:''}); planSheet(); var ins = document.querySelectorAll('#planf .pn'); if (ins.length) ins[ins.length - 1].focus(); }
+function planDelRow(i){ readPlan(); ui.pd.items.splice(i, 1); planSheet(); }
+function savePlan(e){
+  e.preventDefault(); readPlan();
+  var d = ui.pd, inc = parseAmt(d.income);
+  var items = d.items.map(function(x){ var v = parseAmt(x.amount); return {kind:x.kind, name:(x.name || '').trim() || (x.kind === 'invest' ? 'Investice' : x.kind === 'save' ? 'Spoření' : 'Položka'), amount:isFinite(v) && v > 0 ? Math.round(v) : 0}; })
+    .filter(function(x){ return x.amount > 0 || x.kind !== 'other'; });
+  S.plans = S.plans || {};
+  S.plans[d.ym] = {income:isFinite(inc) && inc > 0 ? Math.round(inc) : 0, items:items, saved:today()};
+  save(); closeSheet(); render(); toast('Plán uložen');
+}
+function planDel(){ if (!confirm('Smazat plán tohoto měsíce?')) return; delete S.plans[ui.pd.ym]; save(); closeSheet(); render(); toast('Plán smazán'); }
+function planSkip(){ S.plans = S.plans || {}; S.plans[ui.pd.ym] = {skip:true}; save(); closeSheet(); render(); }
+function vBudget(){
+  var h = vBudgetBase(), i = h.indexOf('</section>');
+  if (i < 0 || !S.accounts.length) return h;
+  return h.slice(0, i + 10) + planCard(ui.budMonth || curYM()) + h.slice(i + 10);
+}
+function homePlan(){
+  var c = planCalc(ui.txMonth); if (!c) return '';
+  return '<button class="bcard" onclick="App.goBudget()" style="padding:12px 18px 14px"><span class="rowsb"><span class="lbl">Nerozpočtováno z výplaty</span><span class="amt' + (c.free < 0 ? ' neg' : ' pos') + '" style="font-size:16px">' + money(Math.round(c.free)) + '</span></span><span style="display:block;margin-top:10px">' + planBar(c) + '</span></button>';
+}
+function homeActiveGroup(){
+  var g = S.activeGroup ? grpById(S.activeGroup) : null; if (!g) return '';
+  var st = grpStats(g.id);
+  return '<div class="card mt"><button class="row" onclick="App.grpDetail(\'' + g.id + '\')">' + grpTile(g, 'sm') + '<span class="main"><span class="t">' + esc(g.name) + '</span><span class="s">aktivní skupina · ' + grpRange(st) + '</span></span><span class="amt">' + money(Math.round(st.exp)) + '</span></button></div>';
+}
+function homeBudget(){
+  var h = homeBudgetBase(), i = h.indexOf('<div class="duo">');
+  var extra = homePlan() + homeActiveGroup();
+  return i < 0 ? h + extra : h.slice(0, i) + extra + h.slice(i);
+}
+function homeTodos(){
+  var out = homeTodosBase(), ym = curYM(), m = monthStats(ym);
+  if (m.inc > 0 && !(S.plans || {})[ym]) out.unshift({tile:tileHtml('var(--pos)', ic('wallet', 17), 'sm'), title:'Plán z výplaty', sub:'příjmy ' + money(Math.round(m.inc)) + ' zatím nerozdělené', btn:'Naplánovat', act:'App.planForm()'});
+  return out;
+}
+
+/* ---------- Rozbor: month / year ---------- */
+function modeSeg(){
+  var y = ui.statMode === 'year';
+  return '<div class="seg mseg" role="group" aria-label="Období"><button class="' + (!y ? 'on' : '') + '" aria-pressed="' + !y + '" onclick="App.statMode(\'month\')">Měsíc</button><button class="' + (y ? 'on' : '') + '" aria-pressed="' + y + '" onclick="App.statMode(\'year\')">Rok</button></div>';
+}
+function statMode(m){ ui.statMode = m; if (m === 'year' && !ui.statYear) ui.statYear = +String(ui.statMonth || curYM()).slice(0, 4); render(); }
+function statYearGo(d){ ui.statYear = (ui.statYear || +curYM().slice(0, 4)) + d; render(); }
+function statGoM(ym){ ui.statMode = 'month'; ui.statMonth = ym; render(); window.scrollTo(0, 0); }
+function yearStats(y, upto){
+  var cur = curYM(), cy = +cur.slice(0, 4), last = upto || (y === cy ? +cur.slice(5, 7) : 12);
+  var r = {inc:0, exp:0, byCat:{}, byInc:{}, inv:0, months:0, last:last, mon:[]};
+  for (var mo = 1; mo <= last; mo++) {
+    var ym = y + '-' + pad(mo), s = monthStats(ym), iv = investedIn(ym).v;
+    r.inc += s.inc; r.exp += s.exp; r.inv += iv; if (s.inc || s.exp) r.months++;
+    Object.keys(s.byCat).forEach(function(k){ r.byCat[k] = (r.byCat[k] || 0) + s.byCat[k]; });
+    Object.keys(s.byInc).forEach(function(k){ r.byInc[k] = (r.byInc[k] || 0) + s.byInc[k]; });
+    r.mon.push({ym:ym, inc:s.inc, exp:Math.max(0, s.exp)});
+  }
+  return r;
+}
+function vStatsYear(){
+  var cy = +curYM().slice(0, 4), y = ui.statYear || cy;
+  var sw = '<div class="mswitch"><button onclick="App.statYearGo(-1)" aria-label="Předchozí rok">' + ic('chevL', 15, 2.4) + '</button><span>' + y + '</span><button onclick="App.statYearGo(1)" aria-label="Další rok"' + (y >= cy ? ' style="opacity:.35;pointer-events:none"' : '') + '>' + ic('chevR', 15, 2.4) + '</button></div>';
+  var h = hdr('Rozbor', sw, true) + modeSeg();
+  if (!S.accounts.length) return h + vEmptyBody();
+  var r = yearStats(y), pr = yearStats(y - 1, r.last);
+  var list = Object.keys(r.byCat).map(function(k){ return {id:k, v:r.byCat[k], c:cat(k)}; }).filter(function(x){ return x.v > 0.5; }).sort(function(a, b){ return b.v - a.v; });
+  var tot = list.reduce(function(s, x){ return s + x.v; }, 0), nm = Math.max(1, r.months);
+  var cmpOk = pr.exp > 0 && pr.months >= r.months;
+  var dv = cmpOk && r.exp > 0 ? (r.exp - pr.exp) / pr.exp : null;
+  var badge = dv === null ? '' : Math.abs(dv) < 0.03 ? '<span class="badge flat">jako loni</span>' : '<span class="badge' + (dv > 0 ? ' up' : '') + '">' + (dv < 0 ? '↓ ' : '↑ ') + Math.round(Math.abs(dv) * 100) + '\u00a0% proti loňsku</span>';
+  h += '<section class="hcard" style="padding:16px 18px 6px"><div class="rowsb" style="align-items:flex-end"><div><div class="lbl">Výdaje ' + (y === cy && r.last < 12 ? 'leden–' + MONTHS[r.last - 1] + ' ' + y : 'za rok ' + y) + '</div><div class="bignum md">' + NF.format(Math.round(r.exp)) + '<span class="cur" style="font-size:15px">' + esc(S.currency) + '</span></div></div><div style="margin-bottom:6px">' + badge + '</div></div>' +
+    '<div class="rowsb small mute" style="font-weight:600;margin-top:2px"><span>Ø ' + money(Math.round(r.exp / nm)) + ' měsíčně</span>' + (cmpOk ? '<span>loni ' + money(Math.round(pr.exp)) + '</span>' : '') + '</div>';
+  if (list.length) {
+    h += '<div class="sbar" style="margin:14px 0 6px" role="img" aria-label="Podíl kategorií na ročních výdajích">' + list.map(function(x){ return '<i style="flex:' + x.v.toFixed(2) + ';background:' + catStyle(x.c).col + '"></i>'; }).join('') + '</div>';
+    h += list.map(function(x, ix){
+      var pv = pr.byCat[x.id] || 0, tr = '', tc = 'var(--mut)';
+      if (cmpOk) { if (!pv) tr = 'nové'; else { var dd = (x.v - pv) / pv; if (Math.abs(dd) < 0.03) tr = 'jako loni'; else if (dd > 0) { tr = '↑ ' + Math.round(dd * 100) + '\u00a0%'; if (dd > 0.1) tc = 'var(--warn)'; } else { tr = '↓ ' + Math.round(-dd * 100) + '\u00a0%'; tc = 'var(--pos)'; } } }
+      return '<div class="catrow"' + (ix ? '' : ' style="border-top:0"') + '>' + catTile(x.c, 'sm') + '<span class="main"><span class="n">' + esc(x.c ? x.c.name : 'Bez kategorie') + '</span><span class="p">' + Math.round(x.v / tot * 100) + '\u00a0% · Ø ' + money(Math.round(x.v / nm)) + '/měs.</span></span>' +
+        '<span class="rt"><span class="a">' + money(Math.round(x.v)) + '</span><span class="tr" style="color:' + tc + '">' + (tr || '&nbsp;') + '</span></span></div>';
+    }).join('');
+  } else h += '<div class="empty" style="padding:22px 0 18px">Žádné výdaje</div>';
+  h += '</section>';
+  h += '<div class="duo"><button onclick="App.statMode(\'year\')"><span class="k"><span>Příjmy</span></span><span class="v">' + money(Math.round(r.inc), true) + '</span></button>' +
+    '<button onclick="App.goBudget()"><span class="k"><span>Investováno</span>' + (r.inc > 0 ? '<span class="pos" style="font-weight:800">' + Math.round(r.inv / r.inc * 100) + '\u00a0%</span>' : '') + '</span><span class="v">' + money(Math.round(r.inv)) + '</span></button></div>';
+  var places = {}, pm2 = myPayMap();
+  S.tx.forEach(function(t){
+    if (!t.place || (t.type !== 'expense' && t.type !== 'refund')) return;
+    var sd = statDate(t, pm2); if (!sd || sd.slice(0, 4) !== String(y)) return;
+    var k = t.place.trim().toLowerCase(), o = places[k] || (places[k] = {name:t.place.trim(), v:0, n:0});
+    if (t.type === 'expense') { o.v += czk(t); o.n++; } else o.v -= czk(t);
+  });
+  var pl2 = Object.keys(places).map(function(k){ return places[k]; }).filter(function(o){ return o.v > 0.5; }).sort(function(a, b){ return b.v - a.v; }).slice(0, 8);
+  if (pl2.length) h += '<div class="card mt"><div class="ch2"><h2>Místa</h2><span class="r">nejvíc utraceno</span></div>' + pl2.map(function(o){
+    return '<div class="row">' + tileHtml('var(--cn)', ic('pin', 16), 'sm') + '<span class="main"><span class="t">' + esc(o.name) + '</span><span class="s">' + o.n + '× nákup</span></span><span class="amt">' + money(Math.round(o.v)) + '</span></div>';
+  }).join('') + '</div>';
+  var inc = Object.keys(r.byInc).map(function(k){ return {v:r.byInc[k], c:cat(k)}; }).sort(function(a, b){ return b.v - a.v; });
+  if (inc.length) h += '<div class="card mt"><div class="ch2"><h2>Příjmy</h2><span class="r">' + money(Math.round(r.inc)) + '</span></div>' + inc.map(function(x){
+    return '<div class="row">' + catTile(x.c, 'sm') + '<span class="main"><span class="t">' + esc(x.c ? x.c.name : 'Bez kategorie') + '</span></span><span class="amt pos">' + money(Math.round(x.v), true) + '</span></div>';
+  }).join('') + '</div>';
+  h += groupsCard();
+  var full = yearStats(y, y === cy ? +curYM().slice(5, 7) : 12).mon, mx = 1;
+  while (full.length < 12) { var mo2 = full.length + 1; full.push({ym:y + '-' + pad(mo2), inc:0, exp:0, future:true}); }
+  full.forEach(function(d){ mx = Math.max(mx, d.inc, d.exp); });
+  h += '<div class="gcard mt" style="padding:14px 10px"><div class="rowsb" style="padding:0 8px 8px"><h2 style="margin:0;font-size:15px;font-weight:700">Měsíce roku ' + y + '</h2><span class="legend"><span><i style="background:var(--pos)"></i>Příjmy</span><span><i style="background:var(--mut)"></i>Výdaje</span></span></div><div class="year">' + full.map(function(d){
+    var mo = +d.ym.slice(5, 7) - 1;
+    return '<button' + (d.future ? ' disabled style="opacity:.3"' : ' onclick="App.statGoM(\'' + d.ym + '\')"') + ' aria-label="' + ymLabel(d.ym) + '"><span class="bars" style="opacity:1"><i style="height:' + Math.max(2, Math.round(d.inc / mx * 64)) + 'px;background:var(--pos)"></i><i style="height:' + Math.max(2, Math.round(d.exp / mx * 64)) + 'px;background:var(--mut)"></i></span><span class="lab">' + MS[mo] + '</span></button>';
+  }).join('') + '</div></div>';
+  return h;
+}
+function vStats(){
+  if (ui.statMode === 'year') return vStatsYear();
+  var h = vStatsMonth(), i = h.indexOf('</header>');
+  if (i >= 0) h = h.slice(0, i + 9) + modeSeg() + h.slice(i + 9);
+  return h + groupsCard();
+}
+
 /* ---------- init ---------- */
-window.App = {tab:tab, addTx:addTx, editTx:editTx, setTxType:setTxType, pickCat:pickCat, saveTx:saveTx, delTx:delTx,
+window.App = {grpPick:grpPick, grpSet:grpSet, grpNewInline:grpNewInline, grpDetail:grpDetail, grpForm:grpForm, saveGrp:saveGrp, delGrp:delGrp, grpActive:grpActive, grpAdd:grpAdd, grpToggleTx:grpToggleTx,
+  planForm:planForm, planCalcLive:planCalcLive, planAddRow:planAddRow, planDelRow:planDelRow, savePlan:savePlan, planDel:planDel, planSkip:planSkip,
+  statMode:statMode, statYearGo:statYearGo, statGoM:statGoM,
+  tab:tab, addTx:addTx, editTx:editTx, setTxType:setTxType, pickCat:pickCat, saveTx:saveTx, delTx:delTx,
   txSet:txSet, txNote:txNote, txSign:txSign, key:key, toggleSearch:toggleSearch,
   accForm:accForm, accTypeChange:accTypeChange, saveAcc:saveAcc, delAcc:delAcc, accDetail:accDetail, updateValue:updateValue, saveValue:saveValue,
   closeSheet:closeSheet, reveal:reveal, setHide:setHide, month:month, search:search, setFilter:setFilter, setRange:setRange, statGo:statGo,

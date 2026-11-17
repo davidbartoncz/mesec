@@ -1907,7 +1907,7 @@ function vBudgetBase(){
     h += '<section class="hcard"><div class="rowsb"><span class="lbl">Utraceno z rozpočtu</span><span class="badge' + (left < 0 ? ' up' : '') + '">' + (left >= 0 ? 'zbývá ' + money(Math.round(left)) : 'přes o ' + money(Math.round(-left))) + '</span></div>' +
       '<div class="bignum md">' + NF.format(Math.round(m.exp)) + '<span class="cur" style="font-size:15px">z ' + NF.format(Math.round(tot)) + ' ' + esc(S.currency) + (+S.budgetPct > 0 ? ' · ' + String(S.budgetPct).replace('.', ',') + '\u00a0% příjmů' : '') + '</span></div>' +
       '<div style="margin-top:12px">' + bbar(p, pace, true, resv.total / tot) + '</div>' + reservedNote(resv) +
-      '<div class="rowsb small mute" style="font-weight:600;margin-top:8px"><span>' + Math.round(p * 100) + '\u00a0% rozpočtu</span><span>' + (pace !== null ? 'čárka = dnešní den v měsíci' : '') + '</span></div>' +
+      '<div class="rowsb small mute" style="font-weight:600;margin-top:8px"><span>' + Math.round(p * 100) + '\u00a0% rozpočtu</span><span>' + '' + '</span></div>' +
       paceTiles(budgetPace(ym), +ym.slice(5, 7)) + '</section>';
   } else {
     h += '<section class="hcard"><div class="lbl">Rozpočet zatím není nastavený</div><p class="note" style="margin:6px 0 12px">Měsíční limity pro kategorie výdajů. Aplikace pak hlídá, kolik z nich zbývá.</p><button class="btn" onclick="App.budgetForm()">Nastavit rozpočet</button></section>';
@@ -1926,7 +1926,7 @@ function vBudgetBase(){
   if (byIds.length) h += '<div style="margin-top:6px">' + byIds.map(function(k){ var a = acc(k);
     return '<div class="row" style="padding:8px 0">' + accTile(a, 'sm') + '<span class="main"><span class="t">' + esc(a ? a.name : '') + '</span></span><span class="amt">' + money(Math.round(inv.by[k]), true) + '</span></div>'; }).join('') + '</div>';
   if (si > 0) h += '<div class="rowsb small mute" style="font-weight:600;margin-top:8px"><span>Průměr ' + (sn < 12 ? 'za ' + sn + ' ' + pl(sn, 'měsíc', 'měsíce', 'měsíců') : 'za 12 měsíců') + '</span><span>' + Math.round(sv / si * 100) + '\u00a0% příjmů · ' + money(Math.round(sv / sn)) + ' měsíčně</span></div>';
-  h += '<p class="hint" style="margin:8px 0 0">Počítají se převody na investiční, penzijní a kryptoměnové účty, výběry z nich se odečítají.</p></section>';
+  h += '</section>';
   var ids = Object.keys(bc).sort(function(a, b){ return (m.byCat[b] || 0) / bc[b] - (m.byCat[a] || 0) / bc[a]; });
   if (ids.length) h += '<div class="card mt"><div class="ch2"><h2>Kategorie</h2><span class="r">utraceno z limitu</span></div>' + ids.map(function(k){
     var c = cat(k), sp = Math.max(0, m.byCat[k] || 0), lim = bc[k], pp = sp / lim, rv = resv.byCat[k] || 0, lf = lim - sp - rv;
@@ -2920,40 +2920,39 @@ function planCard(ym){
   var tol = function(v){ return Math.max(1, v * 0.005); };
   if (c.bud > 0) {
     var bp = c.budAct / c.bud, bst = c.budAct > c.bud + tol(c.bud) ? {cls:'neg', txt:'přečerpáno o ' + money(Math.round(c.budAct - c.bud))}
-      : c.cur && c.pace !== null && bp > c.pace + 0.05 ? {cls:'warn', txt:'utraceno ' + money(Math.round(c.budAct)) + ' · rychlejší tempo'}
-      : {cls:'pos', txt:'utraceno ' + money(Math.round(c.budAct)) + (c.past ? ' · v limitu' : ' · v plánu')};
+      : c.cur && c.pace !== null && bp > c.pace + 0.05 ? {cls:'warn', txt:'rychlejší tempo'}
+      : {cls:'pos', txt:'utraceno ' + money(Math.round(c.budAct))};
     h += cmpRow('var(--cn)', 'Rozpočet výdajů', pctTxt(c.bud / Math.max(1, c.inc) * 100), c.bud, c.budAct, bst, bp, c.cur ? c.pace : null);
   } else h += cmpRow('var(--cn)', 'Rozpočet výdajů', 'nenastaven', 0, 0, null);
   if (c.subsPlan > 0) {
-    var sst = c.subsAct >= c.subsPlan - tol(c.subsPlan) ? {cls:'pos', txt:'zaplaceno ' + money(Math.round(c.subsAct))} : {cls:c.past ? 'warn' : 'pos', txt:'zaplaceno ' + money(Math.round(c.subsAct)) + ' z ' + money(Math.round(c.subsPlan))};
+    var sst = c.subsAct >= c.subsPlan - tol(c.subsPlan) ? {cls:'pos', txt:'zaplaceno ' + money(Math.round(c.subsAct))} : {cls:c.past ? 'warn' : 'pos', txt:'zaplaceno ' + money(Math.round(c.subsAct))};
     h += cmpRow('var(--ca)', 'Pravidelné platby', 'mimo rozpočet', c.subsPlan, c.subsAct, sst, c.subsAct / c.subsPlan);
   }
   c.items.forEach(function(x){
     var note = x.pct ? pctTxt(x.pct) : (c.inc > 0 ? pctTxt(x.amount / c.inc * 100) : ''), s2 = null, pp = x.amount > 0 ? x.actual / x.amount : 0;
     if (x.kind === 'invest' || x.kind === 'save') {
       if (x.amount <= 0) s2 = null;
-      else if (x.actual > x.amount + tol(x.amount)) s2 = {cls:'pos', txt:'převedeno ' + money(Math.round(x.actual)) + ' · nad plán'};
+      else if (x.actual > x.amount + tol(x.amount)) s2 = {cls:'pos', txt:'nad plán o ' + money(Math.round(x.actual - x.amount))};
       else if (x.actual >= x.amount - tol(x.amount)) s2 = {cls:'pos', txt:'✓ splněno'};
-      else s2 = {cls:c.past ? 'neg' : 'warn', txt:'převedeno ' + money(Math.max(0, Math.round(x.actual))) + ' · chybí ' + money(Math.round(x.amount - Math.max(0, x.actual)))};
+      else s2 = {cls:c.past ? 'neg' : 'warn', txt:'chybí ' + money(Math.round(x.amount - Math.max(0, x.actual)))};
     } else if (x.link) {
       var ln = x.link.slice(0, 4) === 'grp:' ? (grpById(x.link.slice(4)) || {}).name : (cat(x.link.slice(4)) || {}).name;
       note = (note ? note + ' · ' : '') + esc(ln || '');
-      s2 = x.actual > x.amount + tol(x.amount) ? {cls:'neg', txt:'čerpáno ' + money(Math.round(x.actual)) + ' · přečerpáno o ' + money(Math.round(x.actual - x.amount))} : {cls:'pos', txt:'čerpáno ' + money(Math.round(Math.max(0, x.actual))) + ' z ' + money(Math.round(x.amount))};
-    } else s2 = {cls:'mute', txt:'bez propojení, nesleduje se'};
+      s2 = x.actual > x.amount + tol(x.amount) ? {cls:'neg', txt:'čerpáno ' + money(Math.round(x.actual)) + ' · přečerpáno o ' + money(Math.round(x.actual - x.amount))} : {cls:'pos', txt:'čerpáno ' + money(Math.round(Math.max(0, x.actual)))};
+    } else s2 = null;
     if ((x.kind === 'invest' || x.kind === 'save') && s2 && !c['_g' + x.kind]) {
       c['_g' + x.kind] = 1;
       var gin = x.kind === 'save' ? c.fl.savIn : c.fl.invIn, gout = x.kind === 'save' ? c.fl.savOut : c.fl.invOut;
-      if (gout > 0.5) s2.txt += ' (převedeno ' + money(Math.round(gin)) + ', vybráno ' + money(Math.round(gout)) + ')';
+
     }
     h += cmpRow(PLANCOL[x.kind] || PLANCOL.other, esc(x.name), note, x.amount, x.actual, s2, s2 && s2.cls !== 'mute' ? pp : 0);
   });
-  if (c.outside > 0.5) h += '<div class="crow"><div class="cr1"><span class="cn"><i style="background:var(--neg)"></i>Výdaje mimo plán <small>kategorie bez limitu</small></span><b class="neg">' + money(-Math.round(c.outside)) + '</b></div></div>';
+  if (c.outside > 0.5) h += '<div class="crow"><div class="cr1"><span class="cn"><i style="background:var(--neg)"></i>Výdaje mimo plán</span><b class="neg">' + money(-Math.round(c.outside)) + '</b></div></div>';
   [['debt', 'Splátky dluhů', 'převody na úvěry', 'Půjčeno na úvěr'], ['lend', 'Půjčeno ostatním', 'převody na pohledávky', 'Vráceno z půjček'], ['prop', 'Převody na majetek', 'nemovitosti a věci', 'Převody z majetku']].forEach(function(f){
     var v = c.fl[f[0]]; if (Math.abs(v) <= 0.5) return;
-    h += '<div class="crow"><div class="cr1"><span class="cn"><i style="background:' + (v > 0 ? 'var(--neg)' : 'var(--pos)') + '"></i>' + (v > 0 ? f[1] : f[3]) + ' <small>' + f[2] + ' · mimo plán</small></span><b class="' + (v > 0 ? 'neg' : 'pos') + '">' + money(-Math.round(v), true) + '</b></div></div>';
+    h += '<div class="crow"><div class="cr1"><span class="cn"><i style="background:' + (v > 0 ? 'var(--neg)' : 'var(--pos)') + '"></i>' + (v > 0 ? f[1] : f[3]) + ' <small>mimo plán</small></span><b class="' + (v > 0 ? 'neg' : 'pos') + '">' + money(-Math.round(v), true) + '</b></div></div>';
   });
-  h += '<div class="crow tot"><div class="cr1"><span class="cn"><i style="background:var(--acc)"></i>Nerozpočtováno <small>zůstane jako spoření</small></span><b' + (c.free < 0 ? ' class="neg"' : '') + '>' + money(Math.round(c.free)) + '</b></div></div>';
-  if (!c.past) h += '<p class="hint" style="margin:8px 0 0">Co z rozpočtu nebude utraceno, se na konci měsíce přičte ke skutečnému spoření.</p>';
+  h += '<div class="crow tot"><div class="cr1"><span class="cn"><i style="background:var(--acc)"></i>Nerozpočtováno</span><b' + (c.free < 0 ? ' class="neg"' : '') + '>' + money(Math.round(c.free)) + '</b></div></div>';
   return h + '</section>';
 }
 function planForm(){
@@ -2988,13 +2987,12 @@ function planSheet(){
   openSheet('<form id="planf" onsubmit="App.savePlan(event)" autocomplete="off"><div class="shead"><h3>Plán z výplaty</h3><button type="button" class="xbtn2" onclick="App.closeSheet()" aria-label="Zavřít">' + ic('x', 17, 2.4) + '</button></div>' +
     '<div class="sub">' + mn[0].toUpperCase() + mn.slice(1) + ' ' + d.ym.slice(0, 4) + '</div>' +
     '<label class="field"><span>Příjmy měsíce</span><input class="inp" name="income" inputmode="decimal" placeholder="' + NF.format(Math.round(m.inc)) + '" value="' + esc(String(d.income || '')) + '" oninput="App.planCalcLive()"></label>' +
-    '<p class="hint">Připsáno zatím ' + money(Math.round(m.inc)) + '. Očekávanou výplatu lze zadat předem, počítá se vyšší z obou částek. Z této částky se počítají i procenta.</p>' +
+    '<p class="hint">Připsáno zatím ' + money(Math.round(m.inc)) + '. Očekávanou výplatu lze zadat předem.</p>' +
     '<div class="prow" style="padding:4px 2px 8px"><span><i style="background:var(--cn)"></i>Rozpočet výdajů <small id="pcBud"></small></span><b id="pcBudAmt">' + (budgetTotal(d.ym) > 0 ? money(-Math.round(budgetTotal(d.ym))) : '<button type="button" class="linkr" onclick="App.budgetForm()">Nastavit limity</button>') + '</b></div>' +
     (subsInfo > 0 ? '<div class="prow" style="padding:4px 2px 8px"><span><i style="background:var(--ca)"></i>Pravidelné platby <small>mimo rozpočet</small></span><b>' + money(-Math.round(subsInfo)) + '</b></div>' : '') +
     '<div class="lbl" style="margin:6px 2px 2px">Další položky plánu</div>' + rows +
     '<div class="btns2"><button type="button" class="btn ghost sm" onclick="App.planAddRow()">+ Přidat položku</button></div>' +
     '<div class="prow tot" style="margin-top:14px"><span><i style="background:var(--acc)"></i>Nerozpočtováno <small id="pcFree"></small></span><b id="planFree"></b></div>' +
-    '<p class="hint" style="margin:4px 2px 0">Nerozpočtované peníze zůstanou jako spoření, stejně jako to, co z rozpočtu nebude utraceno.</p>' +
     '<div class="mt"><button class="btn" type="submit">Uložit plán</button></div>' +
     ((S.plans || {})[d.ym] && !(S.plans[d.ym].skip) ? '<button type="button" class="linkbtn" onclick="App.planDel()">Smazat plán</button>' : '<button type="button" class="linkbtn" style="color:var(--mut)" onclick="App.planSkip()">Tento měsíc bez plánu</button>') +
     '</form>', function(){ planCalcLive(); });
@@ -3062,14 +3060,14 @@ function budSumLive(){
   var sum = 0; f.querySelectorAll('.bin').forEach(function(i){ var v = parseAmt(i.value); if (isFinite(v) && v > 0) sum += v; });
   var tv = parseAmt(f.elements.total.value), inc = budgetIncome(curYM()), tot = isFinite(tv) && tv > 0 ? (ui.budUnit === '%' ? Math.round(inc * tv / 100) : tv) : 0;
   if (!sum) { el.textContent = ''; el.className = 'hint'; return; }
-  el.textContent = 'Součet limitů ' + money(Math.round(sum)).replace(/&nbsp;/g, '\u00a0') + (tot ? ' · celkový rozpočet ' + money(Math.round(tot)).replace(/&nbsp;/g, '\u00a0') + (Math.abs(sum - tot) >= 1 ? (sum > tot ? ' – limity jsou o ' + money(Math.round(sum - tot)).replace(/&nbsp;/g, '\u00a0') + ' vyšší' : ' – na kategorie bez limitu zbývá ' + money(Math.round(tot - sum)).replace(/&nbsp;/g, '\u00a0')) : ' – sedí') : '');
+  el.textContent = tot && sum > tot + 0.5 ? 'Limity kategorií dávají dohromady ' + money(Math.round(sum)).replace(/&nbsp;/g, '\u00a0') + ', o ' + money(Math.round(sum - tot)).replace(/&nbsp;/g, '\u00a0') + ' víc než celkový rozpočet.' : '';
   el.className = 'hint' + (tot && sum > tot + 0.5 ? ' warnt' : '');
 }
 function vBudget(){
   var h = vBudgetBase(), i = h.indexOf('</section>');
   if (i < 0 || !S.accounts.length) return h;
   var ym = ui.budMonth || curYM(), mm = limitsMismatch(ym), note = '';
-  if (mm) note = '<div class="notice">' + ic('warn', 20, 2.2) + '<span class="tx">' + (mm.sum > mm.tot ? 'Limity kategorií dávají dohromady ' + money(Math.round(mm.sum)) + ', ale celkový rozpočet je ' + money(Math.round(mm.tot)) + '. Počítá se s celkovým rozpočtem.' : 'Limity kategorií dávají dohromady ' + money(Math.round(mm.sum)) + ' z celkových ' + money(Math.round(mm.tot)) + '. Zbytek ' + money(Math.round(mm.tot - mm.sum)) + ' je pro kategorie bez limitu.') + '</span><button class="nb" onclick="App.budgetForm()">Upravit</button></div>';
+  if (mm && mm.sum > mm.tot) note = '<div class="notice">' + ic('warn', 20, 2.2) + '<span class="tx">' + (mm.sum > mm.tot ? 'Limity kategorií dávají dohromady ' + money(Math.round(mm.sum)) + ', ale celkový rozpočet je ' + money(Math.round(mm.tot)) + '. Počítá se s celkovým rozpočtem.' : 'Limity kategorií dávají dohromady ' + money(Math.round(mm.sum)) + ' z celkových ' + money(Math.round(mm.tot)) + '. Zbytek ' + money(Math.round(mm.tot - mm.sum)) + ' je pro kategorie bez limitu.') + '</span><button class="nb" onclick="App.budgetForm()">Upravit</button></div>';
   return h.slice(0, i + 10) + note + planCard(ym) + h.slice(i + 10);
 }
 function homePlan(){

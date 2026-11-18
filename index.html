@@ -2983,8 +2983,13 @@ function linkOpts(sel){
   if ((S.groups || []).length) o += '<optgroup label="Skupiny">' + S.groups.map(function(g){ return '<option value="grp:' + g.id + '"' + (sel === 'grp:' + g.id ? ' selected' : '') + '>' + esc(g.name) + '</option>'; }).join('') + '</optgroup>';
   return o;
 }
+/* Debt accounts that can be planned for a month: open ones, and ones closed during that month or later (a debt paid off this month still belongs in its plan). */
+function planDebtAccs(ym){
+  return S.accounts.filter(function(a){ return a.type === 'debt' && (!a.closed || a.closed >= ym + '-01'); });
+}
 function debtOpts(sel){
-  return S.accounts.filter(function(a){ return a.type === 'debt' && (!a.closed || 'acc:' + a.id === sel); }).map(function(a){ return '<option value="acc:' + a.id + '"' + (sel === 'acc:' + a.id ? ' selected' : '') + '>' + esc(a.name) + '</option>'; }).join('');
+  var ym = ui.pd ? ui.pd.ym : curYM();
+  return S.accounts.filter(function(a){ return a.type === 'debt' && (planDebtAccs(ym).indexOf(a) >= 0 || 'acc:' + a.id === sel); }).map(function(a){ return '<option value="acc:' + a.id + '"' + (sel === 'acc:' + a.id ? ' selected' : '') + '>' + esc(a.name) + (a.closed ? ' (splaceno)' : '') + '</option>'; }).join('');
 }
 function unitSw(i, unit, auto){
   var b = function(u, lbl){ return '<button type="button" class="' + (unit === u ? 'on' : '') + '" aria-pressed="' + (unit === u) + '" onclick="App.planUnit(' + i + ',\'' + u + '\')">' + lbl + '</button>'; };
@@ -3004,7 +3009,7 @@ function planSheet(){
       '<div class="psub">' + unitSw(i, x.unit, true) + '<span class="pcalc" id="pc' + i + '"></span></div>' +
       (x.kind === 'other' ? '<label class="plink"><span>Sledovat čerpání podle</span><select class="inp pl plk" aria-label="Propojit položku s kategorií nebo skupinou">' + linkOpts(x.link) + '</select></label>' : '') + '</div>';
   }).join('');
-  var subsInfo = planCalcPreview(d.ym), hasDebt = S.accounts.some(function(a){ return a.type === 'debt' && !a.closed; });
+  var subsInfo = planCalcPreview(d.ym), hasDebt = planDebtAccs(d.ym).length > 0;
   openSheet('<form id="planf" onsubmit="App.savePlan(event)" autocomplete="off"><div class="shead"><h3>Plán z výplaty</h3><button type="button" class="xbtn2" onclick="App.closeSheet()" aria-label="Zavřít">' + ic('x', 17, 2.4) + '</button></div>' +
     '<div class="sub">' + mn[0].toUpperCase() + mn.slice(1) + ' ' + d.ym.slice(0, 4) + '</div>' +
     '<label class="field"><span>Příjmy měsíce</span><input class="inp" name="income" inputmode="decimal" placeholder="' + NF.format(Math.round(m.inc)) + '" value="' + esc(String(d.income || '')) + '" oninput="App.planCalcLive()"></label>' +
@@ -3097,7 +3102,7 @@ function planCalcLive(){
 }
 function planAddRow(kind){
   readPlan();
-  if (kind === 'debt') { var da = S.accounts.filter(function(a){ return a.type === 'debt' && !a.closed; })[0]; ui.pd.items.push({kind:'debt', name:da ? da.name : 'Splátka dluhu', link:da ? 'acc:' + da.id : '', unit:'Kč', amount:''}); }
+  if (kind === 'debt') { var da = planDebtAccs(ui.pd.ym).filter(function(a){ return !ui.pd.items.some(function(x){ return x.link === 'acc:' + a.id; }); })[0] || planDebtAccs(ui.pd.ym)[0]; ui.pd.items.push({kind:'debt', name:da ? da.name : 'Splátka dluhu', link:da ? 'acc:' + da.id : '', unit:'Kč', amount:''}); }
   else ui.pd.items.push({kind:'other', name:'', unit:'Kč', amount:''});
   planSheet();
   if (kind !== 'debt') { var ins = document.querySelectorAll('#planf .pn'); if (ins.length) ins[ins.length - 1].focus(); }

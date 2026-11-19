@@ -458,6 +458,9 @@ nav.tabs .plus{justify-self:center;width:54px;height:54px;border-radius:27px;bac
 .hp b.pos{color:var(--pos)} .hp b.warn{color:var(--warn)} .hp b.neg{color:var(--neg)} .hp b.mute{color:var(--mut)}
 .hpsave{margin-top:8px;padding-top:8px;border-top:1px solid var(--line);font-size:13px;font-weight:600}
 .hpsave .mute{font-size:12px}
+#budf [name=total][readonly]{background:transparent;border-style:dashed;color:var(--mut)}
+button.catrow.tap{appearance:none;width:100%;text-align:left;background:transparent;border-left:0;border-right:0;border-bottom:0;color:var(--ink);cursor:pointer}
+button.catrow.tap:active{opacity:.7}
 </style>
 </head>
 <body>
@@ -1150,8 +1153,8 @@ function vStatsMonth(){
         if (!av) tr = 'nové';
         else { var dd = (x.v - av) / av; if (Math.abs(dd) < 0.03) tr = 'jako obvykle'; else if (dd > 0) { tr = '↑ ' + Math.round(dd * 100) + '\u00a0%'; if (dd > 0.1) tc = 'var(--warn)'; } else { tr = '↓ ' + Math.round(-dd * 100) + '\u00a0%'; tc = 'var(--pos)'; } }
       }
-      return '<div class="catrow"' + (ix ? '' : ' style="border-top:0"') + '>' + catTile(x.c, 'sm') + '<span class="main"><span class="n">' + esc(x.c ? x.c.name : 'Bez kategorie') + '</span><span class="p">' + Math.round(x.v / tot * 100) + '\u00a0% výdajů</span></span>' +
-        '<span class="rt"><span class="a">' + money(x.v) + '</span><span class="tr" style="color:' + tc + '">' + (tr || '&nbsp;') + '</span></span></div>';
+      return '<button class="catrow tap"' + (ix ? '' : ' style="border-top:0"') + ' onclick="App.catSheet(\'' + x.id + '\')">' + catTile(x.c, 'sm') + '<span class="main"><span class="n">' + esc(x.c ? x.c.name : 'Bez kategorie') + '</span><span class="p">' + Math.round(x.v / tot * 100) + '\u00a0% výdajů</span></span>' +
+        '<span class="rt"><span class="a">' + money(x.v) + '</span><span class="tr" style="color:' + tc + '">' + (tr || '&nbsp;') + '</span></span></button>';
     }).join('');
   } else h += '<div class="empty" style="padding:22px 0 18px">Žádné výdaje</div>';
   h += '</section>';
@@ -1169,9 +1172,9 @@ function vStatsMonth(){
   if (pl2.length) h += '<div class="card mt"><div class="ch2"><h2>Místa</h2><span class="r">nejvíc utraceno</span></div>' + pl2.map(function(o){
     return '<div class="row">' + tileHtml('var(--cn)', ic('pin', 16), 'sm') + '<span class="main"><span class="t">' + esc(o.name) + '</span><span class="s">' + o.n + '× nákup</span></span><span class="amt">' + money(o.v) + '</span></div>';
   }).join('') + '</div>';
-  var inc = Object.keys(m.byInc).map(function(k){ return {v:m.byInc[k], c:cat(k)}; }).sort(function(a, b){ return b.v - a.v; });
+  var inc = Object.keys(m.byInc).map(function(k){ return {id:k, v:m.byInc[k], c:cat(k)}; }).sort(function(a, b){ return b.v - a.v; });
   if (inc.length) h += '<div class="card mt"><div class="ch2"><h2>Příjmy</h2><span class="r">' + money(m.inc) + '</span></div>' + inc.map(function(x){
-    return '<div class="row">' + catTile(x.c, 'sm') + '<span class="main"><span class="t">' + esc(x.c ? x.c.name : 'Bez kategorie') + '</span></span><span class="amt pos">' + money(x.v, true) + '</span></div>';
+    return '<button class="row" onclick="App.catSheet(\'' + x.id + '\')">' + catTile(x.c, 'sm') + '<span class="main"><span class="t">' + esc(x.c ? x.c.name : 'Bez kategorie') + '</span></span><span class="amt pos">' + money(x.v, true) + '</span></button>';
   }).join('') + '</div>';
   var data = [], mx = 1, si = 0, se = 0, cnt = 0;
   for (i = 11; i >= 0; i--) { var y2 = addMonths(cur, -i), s2 = monthStats(y2); data.push({ym:y2, inc:s2.inc, exp:Math.max(0, s2.exp)}); mx = Math.max(mx, s2.inc, s2.exp); if (s2.inc || s2.exp) { si += s2.inc; se += s2.exp; cnt++; } }
@@ -1832,7 +1835,7 @@ function investedIn(ym){
   return {v:v, by:by};
 }
 function budgetCats(){ var o = {}; Object.keys(S.budgets || {}).forEach(function(k){ if (cat(k) && +S.budgets[k] > 0) o[k] = +S.budgets[k]; }); return o; }
-function hasTotal(){ return +S.budgetTotal > 0 || +S.budgetPct > 0; }
+function hasTotal(){ return +S.budgetTotal > 0 || +S.budgetPct > 0 || !!S.budgetSum; }
 function budgetIncome(ym){
   var p = planOf(ym), inc = Math.max(p ? +p.income || 0 : 0, monthStats(ym).inc);
   return inc > 0 ? inc : monthStats(addMonths(ym, -1)).inc;
@@ -1952,7 +1955,7 @@ function vBudgetBase(){
     var p = spentB / tot, left = tot - spentB - resv.total, dim = new Date(+ym.slice(0, 4), +ym.slice(5, 7), 0).getDate();
     var daysLeft = ym === cur ? dim - new Date().getDate() + 1 : 0;
     h += '<section class="hcard"><div class="rowsb"><span class="lbl">' + (bp0 && bp0.plan ? 'Běžné výdaje z rozpočtu' : 'Utraceno z rozpočtu') + ' <button class="linkr" style="height:auto;margin-left:6px" onclick="App.budgetForm()">Upravit</button></span><span class="badge' + (left < 0 ? ' up' : '') + '">' + (left >= 0 ? 'zbývá ' + money(Math.round(left)) : 'přes o ' + money(Math.round(-left))) + '</span></div>' +
-      '<div class="bignum md">' + NF.format(Math.round(spentB)) + '<span class="cur" style="font-size:15px">z ' + NF.format(Math.round(tot)) + ' ' + esc(S.currency) + (+S.budgetPct > 0 ? ' · ' + String(S.budgetPct).replace('.', ',') + '\u00a0% příjmů' : '') + '</span></div>' +
+      '<div class="bignum md">' + NF.format(Math.round(spentB)) + '<span class="cur" style="font-size:15px">z ' + NF.format(Math.round(tot)) + ' ' + esc(S.currency) + (+S.budgetPct > 0 ? ' · ' + String(S.budgetPct).replace('.', ',') + '\u00a0% příjmů' : S.budgetSum ? ' · součet limitů' : '') + '</span></div>' +
       '<div style="margin-top:12px">' + bbar(p, pace, true, resv.total / tot) + '</div>' + reservedNote(resv) +
       '<div class="rowsb small mute" style="font-weight:600;margin-top:8px"><span>' + Math.round(p * 100) + '\u00a0% rozpočtu</span><span>' + '' + '</span></div>' +
       paceTiles(budgetPace(ym), +ym.slice(5, 7)) + '</section>';
@@ -1993,29 +1996,49 @@ function budgetAvg(){
   Object.keys(av).forEach(function(k){ av[k] = n ? av[k] / n : 0; });
   return av;
 }
+function budUnitOf(){ return S.budgetSum ? 'sum' : +S.budgetPct > 0 ? '%' : 'Kč'; }
+function budValOf(){ return S.budgetSum ? '' : +S.budgetPct > 0 ? String(S.budgetPct).replace('.', ',') : +S.budgetTotal > 0 ? String(S.budgetTotal) : ''; }
+function setBudgetKind(unit, v){
+  var ok = isFinite(v) && v > 0;
+  S.budgetSum = unit === 'sum' ? true : null;
+  S.budgetPct = unit === '%' && ok ? Math.round(v * 10) / 10 : null;
+  S.budgetTotal = unit === 'Kč' && ok ? Math.round(v) : null;
+}
 function budTotalField(){
-  if (!ui.budUnitKeep) ui.budUnit = +S.budgetPct > 0 ? '%' : 'Kč';
+  if (!ui.budUnitKeep) ui.budUnit = budUnitOf();
   ui.budUnitKeep = false;
-  var pc = ui.budUnit === '%', val = pc ? (+S.budgetPct > 0 ? String(S.budgetPct).replace('.', ',') : '') : (+S.budgetTotal > 0 ? S.budgetTotal : '');
-  if (ui.budTotalVal != null) { val = ui.budTotalVal; ui.budTotalVal = null; }
-  return '<div class="field"><span>Celkový měsíční rozpočet</span><div class="mrow" style="margin-top:0"><input class="inp" name="total" inputmode="decimal" style="flex:1" placeholder="' + (pc ? 'procento z příjmů' : 'součet limitů kategorií') + '" value="' + esc(String(val)) + '" oninput="App.budTotalLive()">' +
-    '<span class="unit" role="group" aria-label="Jednotka"><button type="button" class="' + (!pc ? 'on' : '') + '" aria-pressed="' + !pc + '" onclick="App.budUnit(\'Kč\')">' + esc(S.currency) + '</button><button type="button" class="' + (pc ? 'on' : '') + '" aria-pressed="' + pc + '" onclick="App.budUnit(\'%\')">%</button></span></div>' +
-    '<div class="pcalc" id="budTotCalc" style="padding-right:0"></div></div>';
+  var u = ui.budUnit, val = u === 'sum' ? '' : budValOf();
+  if (u !== budUnitOf()) val = '';
+  if (ui.budTotalVal != null) { val = u === 'sum' ? '' : ui.budTotalVal; ui.budTotalVal = null; }
+  var b = function(k, lbl){ return '<button type="button" class="' + (u === k ? 'on' : '') + '" aria-pressed="' + (u === k) + '" onclick="App.budUnit(\'' + k + '\')">' + lbl + '</button>'; };
+  return '<div class="field"><span>Celkový měsíční rozpočet</span><div class="mrow" style="margin-top:0"><input class="inp" name="total" inputmode="decimal" style="flex:1"' + (u === 'sum' ? ' readonly' : '') + ' placeholder="' + (u === '%' ? 'procento z příjmů' : u === 'sum' ? 'součet limitů' : 'součet limitů kategorií') + '" value="' + esc(String(val)) + '" oninput="App.budTotalLive()"></div>' +
+    '<div class="psub" style="margin-left:0">' + '<span class="unit" role="group" aria-label="Jednotka">' + b('Kč', esc(S.currency)) + b('%', '%') + b('sum', 'součet limitů') + '</span><span class="pcalc" id="budTotCalc"></span></div></div>';
 }
 function budTotalLive(){
   var el = document.getElementById('budTotCalc'), i = document.querySelector('#budf [name=total]'); if (!el || !i) return;
-  var v = parseAmt(i.value), inc = budgetIncome(curYM());
+  var inc = budgetIncome(curYM());
+  if (ui.budUnit === 'sum') {
+    var sum = 0; document.querySelectorAll('#budf .bin').forEach(function(x){ var v = parseAmt(x.value); if (isFinite(v) && v > 0) sum += v; });
+    i.value = sum ? NF.format(Math.round(sum)) : '';
+    el.textContent = sum && inc > 0 ? pctTxt(sum / inc * 100) + ' příjmů' : '';
+    return;
+  }
+  var v = parseAmt(i.value);
   if (!(isFinite(v) && v > 0)) { el.textContent = ''; return; }
   el.textContent = ui.budUnit === '%' ? (inc > 0 ? '= ' + money(Math.round(inc * v / 100)).replace(/&nbsp;/g, '\u00a0') + ' z příjmů ' + money(Math.round(inc)).replace(/&nbsp;/g, '\u00a0') : 'zatím bez příjmů') : (inc > 0 ? pctTxt(v / inc * 100) + ' příjmů' : '');
 }
 function budUnit(u){
   if (ui.budUnit === u) return;
   var i = document.querySelector('#budf [name=total]'), v = i ? parseAmt(i.value) : NaN, inc = budgetIncome(curYM()), nv = i ? i.value : '';
-  if (isFinite(v) && v > 0 && inc > 0) nv = u === '%' ? String(Math.round(v / inc * 1000) / 10).replace('.', ',') : String(Math.round(inc * v / 100));
+  if (ui.budUnit === 'sum') { nv = i ? String(parseAmt(i.value) || '') : ''; v = parseAmt(nv); if (u === '%' && isFinite(v) && v > 0 && inc > 0) nv = String(Math.round(v / inc * 1000) / 10).replace('.', ','); }
+  else if (u !== 'sum' && isFinite(v) && v > 0 && inc > 0) nv = u === '%' ? String(Math.round(v / inc * 1000) / 10).replace('.', ',') : String(Math.round(inc * v / 100));
   var lim = {}; document.querySelectorAll('#budf .bin').forEach(function(x){ lim[x.getAttribute('data-cat')] = x.value; });
   ui.budUnit = u; ui.budUnitKeep = true; ui.budTotalVal = nv;
+  var sh = document.querySelector('.sheet'), top = sh ? sh.scrollTop : 0;
   budgetForm();
   document.querySelectorAll('#budf .bin').forEach(function(x){ var k = x.getAttribute('data-cat'); if (lim[k] != null) x.value = lim[k]; });
+  budTotalLive(); budSumLive();
+  if (sh) sh.scrollTop = top;
 }
 function budgetForm(){
   var lcf = planLinkedCats(curYM()), bc = S.budgets || {}, av = budgetAvg(), r100 = function(v){ return Math.max(100, Math.round(v / 100) * 100); };
@@ -2028,7 +2051,7 @@ function budgetForm(){
       var a = av[c.id] || 0;
       return '<div class="row">' + catTile(c, 'sm') + '<span class="main"><span class="t">' + esc(c.name) + '</span><span class="s">' + (lcf[c.id] ? 'v plánu z výplaty · ' : '') + (a ? 'Ø 3 měsíce ' + money(Math.round(a)) : 'bez útraty') + '</span></span>' +
         '<input class="inp bin" data-cat="' + c.id + '" data-avg="' + (a ? r100(a) : '') + '" inputmode="decimal" placeholder="bez limitu" aria-label="Limit ' + esc(c.name) + '" value="' + (+bc[c.id] > 0 ? bc[c.id] : '') + '"></div>';
-    }).join('') + '</div><div class="mt"><button class="btn" type="submit">Uložit rozpočet</button></div></form>', function(){ budTotalLive(); budSumLive(); var f = document.getElementById('budf'); if (f) f.addEventListener('input', budSumLive); });
+    }).join('') + '</div><div class="mt"><button class="btn" type="submit">Uložit rozpočet</button></div></form>', function(){ budTotalLive(); budSumLive(); var f = document.getElementById('budf'); if (f) f.addEventListener('input', function(){ budSumLive(); if (ui.budUnit === 'sum') budTotalLive(); }); });
 }
 function budgetFill(){
   var n = 0;
@@ -2042,12 +2065,11 @@ function saveBudget(e){
   document.querySelectorAll('#budf .bin').forEach(function(i){ var v = parseAmt(i.value); if (isFinite(v) && v > 0) b[i.getAttribute('data-cat')] = Math.round(v); });
   var t = parseAmt(document.querySelector('#budf [name=total]').value), ok = isFinite(t) && t > 0;
   S.budgets = b;
-  if (ui.budUnit === '%') { S.budgetPct = ok ? Math.round(t * 10) / 10 : null; S.budgetTotal = null; }
-  else { S.budgetTotal = ok ? Math.round(t) : null; S.budgetPct = null; }
+  setBudgetKind(ui.budUnit, t);
   save();
   if (ui.planReturn && ui.pd) {
     ui.planReturn = false;
-    ui.pd.bud = {unit:+S.budgetPct > 0 ? '%' : 'Kč', val:+S.budgetPct > 0 ? String(S.budgetPct).replace('.', ',') : +S.budgetTotal > 0 ? String(S.budgetTotal) : ''};
+    ui.pd.bud = {unit:budUnitOf(), val:budValOf()};
     render(); planSheet();
   } else { closeSheet(); render(); }
   toast('Rozpočet uložen');
@@ -3033,7 +3055,7 @@ function planForm(){
   if (!items.some(function(x){ return x.kind === 'invest'; })) items.unshift({kind:'invest', name:'Investice', unit:'Kč', amount:''});
   if (!items.some(function(x){ return x.kind === 'save'; })) items.splice(1, 0, {kind:'save', name:'Spoření', unit:'Kč', amount:''});
   ui.pd = {ym:ym, income:p && p.income ? p.income : '', items:items,
-    bud:{unit:+S.budgetPct > 0 ? '%' : 'Kč', val:+S.budgetPct > 0 ? String(S.budgetPct).replace('.', ',') : +S.budgetTotal > 0 ? String(S.budgetTotal) : ''}};
+    bud:{unit:budUnitOf(), val:budValOf()}};
   planSheet();
 }
 function linkOpts(sel){
@@ -3051,9 +3073,9 @@ function debtOpts(sel){
   var ym = ui.pd ? ui.pd.ym : curYM();
   return S.accounts.filter(function(a){ return a.type === 'debt' && (planDebtAccs(ym).indexOf(a) >= 0 || 'acc:' + a.id === sel); }).map(function(a){ return '<option value="acc:' + a.id + '"' + (sel === 'acc:' + a.id ? ' selected' : '') + '>' + esc(a.name) + (a.closed ? ' (splaceno)' : '') + '</option>'; }).join('');
 }
-function unitSw(i, unit, auto){
+function unitSw(i, unit, auto, sum){
   var b = function(u, lbl){ return '<button type="button" class="' + (unit === u ? 'on' : '') + '" aria-pressed="' + (unit === u) + '" onclick="App.planUnit(' + i + ',\'' + u + '\')">' + lbl + '</button>'; };
-  return '<span class="unit" role="group" aria-label="Jednotka">' + b('Kč', esc(S.currency)) + b('%', '%') + (auto ? b('auto', 'zbytek') : '') + '</span>';
+  return '<span class="unit" role="group" aria-label="Jednotka">' + b('Kč', esc(S.currency)) + b('%', '%') + (auto ? b('auto', 'zbytek') : '') + (sum ? b('sum', 'součet limitů') : '') + '</span>';
 }
 /* Re-rendering the plan form (unit switch, added row, back from category limits) keeps the scroll position. */
 function planSheet(){
@@ -3083,8 +3105,8 @@ function planSheetRender(){
     '<label class="field"><span>Příjmy měsíce</span><input class="inp" name="income" inputmode="decimal" placeholder="' + NF.format(Math.round(m.inc)) + '" value="' + esc(String(d.income || '')) + '" oninput="App.planCalcLive()"></label>' +
     '<p class="hint">Připsáno zatím ' + money(Math.round(m.inc)) + '. Očekávanou výplatu lze zadat předem.</p>' +
     '<div class="prow2"><div class="mrow" style="margin-top:0"><span class="dotk" style="background:var(--cn)"></span><span class="pname">Rozpočet výdajů</span>' +
-      '<input class="inp pa" name="bud" inputmode="decimal" value="' + esc(d.bud.val) + '" placeholder="' + (catSum > 0 ? NF.format(catSum) : '0') + '" aria-label="Rozpočet výdajů" oninput="App.planCalcLive()"><span style="width:34px;flex:none"></span></div>' +
-      '<div class="psub">' + unitSw(-1, d.bud.unit, false) + '<span class="pcalc" id="pcBudC"></span></div>' +
+      '<input class="inp pa" name="bud" inputmode="decimal"' + (d.bud.unit === 'sum' ? ' readonly' : '') + ' value="' + esc(d.bud.unit === 'sum' ? '' : d.bud.val) + '" placeholder="' + (catSum > 0 ? NF.format(catSum) : '0') + '" aria-label="Rozpočet výdajů" oninput="App.planCalcLive()"><span style="width:34px;flex:none"></span></div>' +
+      '<div class="psub">' + unitSw(-1, d.bud.unit, false, true) + '<span class="pcalc" id="pcBudC"></span></div>' +
       '<div class="psub" style="justify-content:flex-end;margin-top:2px"><button type="button" class="linkr" onclick="App.planLimits()">Limity kategorií' + ic('chevR', 13, 2.4) + '</button></div></div>' +
     (subsInfo > 0 ? '<div class="prow" style="padding:6px 2px 8px"><span><i style="background:var(--ca)"></i>Pravidelné platby <small>mimo rozpočet</small></span><b>' + money(-Math.round(subsInfo)) + '</b></div>' : '') +
     '<div class="lbl" style="margin:10px 2px 2px">Další položky plánu</div>' + rows +
@@ -3120,7 +3142,10 @@ function planUnit(i, u){
   var d = ui.pd, inc = Math.max(parseAmt(d.income) || 0, monthStats(d.ym).inc);
   if (i < 0) {
     var bv = parseAmt(d.bud.val);
-    if (d.bud.unit !== u && isFinite(bv) && bv > 0 && inc > 0) d.bud.val = u === '%' ? String(Math.round(bv / inc * 1000) / 10).replace('.', ',') : String(Math.round(inc * bv / 100));
+    if (d.bud.unit === u) return;
+    if (d.bud.unit === 'sum') { var cs = planLive().bud; d.bud.val = cs > 0 ? (u === '%' && inc > 0 ? String(Math.round(cs / inc * 1000) / 10).replace('.', ',') : String(Math.round(cs))) : ''; }
+    else if (u === 'sum') d.bud.val = '';
+    else if (isFinite(bv) && bv > 0 && inc > 0) d.bud.val = u === '%' ? String(Math.round(bv / inc * 1000) / 10).replace('.', ',') : String(Math.round(inc * bv / 100));
     d.bud.unit = u; planSheet(); return;
   }
   var x = d.items[i]; if (!x || x.unit === u) return;
@@ -3149,10 +3174,10 @@ function planLinkCh(el){
   }
   planSheet();
 }
-function planLimits(){ readPlan(); var sh = document.querySelector('.sheet'); ui.pdKeep = sh ? sh.scrollTop : 0; ui.planReturn = true; ui.budUnit = ui.pd.bud.unit; ui.budUnitKeep = true; ui.budTotalVal = ui.pd.bud.val; budgetForm(); }
+function planLimits(){ readPlan(); var sh = document.querySelector('.sheet'); ui.pdKeep = sh ? sh.scrollTop : 0; ui.planReturn = true; ui.budUnit = ui.pd.bud.unit; ui.budUnitKeep = true; ui.budTotalVal = ui.pd.bud.unit === 'sum' ? null : ui.pd.bud.val; budgetForm(); }
 function planLive(){
   var d = ui.pd, m = monthStats(d.ym), inc = Math.max(parseAmt(d.income) || 0, m.inc), bc = budgetCats();
-  var bv = parseAmt(d.bud.val), bud = isFinite(bv) && bv > 0 ? (d.bud.unit === '%' ? Math.round(inc * bv / 100) : bv) : Object.keys(bc).reduce(function(a, k){ return a + bc[k]; }, 0);
+  var bv = parseAmt(d.bud.val), bud = d.bud.unit !== 'sum' && isFinite(bv) && bv > 0 ? (d.bud.unit === '%' ? Math.round(inc * bv / 100) : bv) : Object.keys(bc).reduce(function(a, k){ return a + bc[k]; }, 0);
   var subs = planCalcPreview(d.ym), amts = [], fixed = 0, ai = -1;
   d.items.forEach(function(x, i){
     if (x.unit === 'auto') { ai = i; amts.push(0); return; }
@@ -3175,7 +3200,8 @@ function planCalcLive(){
     if (el) el.textContent = !(a > 0) ? '' : x.unit === '%' ? '= ' + nb(a) : x.unit === 'auto' ? (L.inc > 0 ? pctTxt(a / L.inc * 100) + ' příjmů' : '') : (L.inc > 0 ? pctTxt(a / L.inc * 100) + ' příjmů' : '');
   });
   var bcEl = document.getElementById('pcBudC');
-  if (bcEl) bcEl.textContent = !(L.bud > 0) ? '' : d.bud.unit === '%' ? '= ' + nb(L.bud) : (L.inc > 0 ? pctTxt(L.bud / L.inc * 100) + ' příjmů' : '') + (parseAmt(d.bud.val) > 0 ? '' : ' · součet limitů');
+  if (bcEl) bcEl.textContent = !(L.bud > 0) ? '' : d.bud.unit === '%' ? '= ' + nb(L.bud) : (L.inc > 0 ? pctTxt(L.bud / L.inc * 100) + ' příjmů' : '');
+  var bIn = f.elements.bud; if (bIn && d.bud.unit === 'sum') bIn.value = L.bud > 0 ? NF.format(Math.round(L.bud)) : '';
   var fe = document.getElementById('planFree'), fp = document.getElementById('pcFree');
   if (fe) { fe.textContent = nb(L.free); fe.className = L.free < -0.5 ? 'neg' : ''; }
   if (fp) fp.textContent = L.inc > 0 ? pctTxt(L.free / L.inc * 100) : '';
@@ -3192,8 +3218,7 @@ function savePlan(e){
   e.preventDefault(); readPlan();
   var d = ui.pd, inc = parseAmt(d.income), base = Math.max(isFinite(inc) ? inc : 0, monthStats(d.ym).inc);
   var bv = parseAmt(d.bud.val), bok = isFinite(bv) && bv > 0;
-  if (d.bud.unit === '%') { S.budgetPct = bok ? Math.round(bv * 10) / 10 : null; S.budgetTotal = null; }
-  else { S.budgetTotal = bok ? Math.round(bv) : null; S.budgetPct = null; }
+  setBudgetKind(d.bud.unit, bv);
   var L = planLive();
   var items = d.items.map(function(x, i){
     var v = parseAmt(x.amount), ok = isFinite(v) && v > 0, pc = x.unit === '%', au = x.unit === 'auto';
@@ -3305,8 +3330,8 @@ function vStatsYear(){
     h += list.map(function(x, ix){
       var pv = pr.byCat[x.id] || 0, tr = '', tc = 'var(--mut)';
       if (cmpOk) { if (!pv) tr = 'nové'; else { var dd = (x.v - pv) / pv; if (Math.abs(dd) < 0.03) tr = 'jako loni'; else if (dd > 0) { tr = '↑ ' + Math.round(dd * 100) + '\u00a0%'; if (dd > 0.1) tc = 'var(--warn)'; } else { tr = '↓ ' + Math.round(-dd * 100) + '\u00a0%'; tc = 'var(--pos)'; } } }
-      return '<div class="catrow"' + (ix ? '' : ' style="border-top:0"') + '>' + catTile(x.c, 'sm') + '<span class="main"><span class="n">' + esc(x.c ? x.c.name : 'Bez kategorie') + '</span><span class="p">' + Math.round(x.v / tot * 100) + '\u00a0% · Ø ' + money(Math.round(x.v / nm)) + '/měs.</span></span>' +
-        '<span class="rt"><span class="a">' + money(Math.round(x.v)) + '</span><span class="tr" style="color:' + tc + '">' + (tr || '&nbsp;') + '</span></span></div>';
+      return '<button class="catrow tap"' + (ix ? '' : ' style="border-top:0"') + ' onclick="App.catSheet(\'' + x.id + '\')">' + catTile(x.c, 'sm') + '<span class="main"><span class="n">' + esc(x.c ? x.c.name : 'Bez kategorie') + '</span><span class="p">' + Math.round(x.v / tot * 100) + '\u00a0% · Ø ' + money(Math.round(x.v / nm)) + '/měs.</span></span>' +
+        '<span class="rt"><span class="a">' + money(Math.round(x.v)) + '</span><span class="tr" style="color:' + tc + '">' + (tr || '&nbsp;') + '</span></span></button>';
     }).join('');
   } else h += '<div class="empty" style="padding:22px 0 18px">Žádné výdaje</div>';
   h += '</section>';
@@ -3323,9 +3348,9 @@ function vStatsYear(){
   if (pl2.length) h += '<div class="card mt"><div class="ch2"><h2>Místa</h2><span class="r">nejvíc utraceno</span></div>' + pl2.map(function(o){
     return '<div class="row">' + tileHtml('var(--cn)', ic('pin', 16), 'sm') + '<span class="main"><span class="t">' + esc(o.name) + '</span><span class="s">' + o.n + '× nákup</span></span><span class="amt">' + money(Math.round(o.v)) + '</span></div>';
   }).join('') + '</div>';
-  var inc = Object.keys(r.byInc).map(function(k){ return {v:r.byInc[k], c:cat(k)}; }).sort(function(a, b){ return b.v - a.v; });
+  var inc = Object.keys(r.byInc).map(function(k){ return {id:k, v:r.byInc[k], c:cat(k)}; }).sort(function(a, b){ return b.v - a.v; });
   if (inc.length) h += '<div class="card mt"><div class="ch2"><h2>Příjmy</h2><span class="r">' + money(Math.round(r.inc)) + '</span></div>' + inc.map(function(x){
-    return '<div class="row">' + catTile(x.c, 'sm') + '<span class="main"><span class="t">' + esc(x.c ? x.c.name : 'Bez kategorie') + '</span></span><span class="amt pos">' + money(Math.round(x.v), true) + '</span></div>';
+    return '<button class="row" onclick="App.catSheet(\'' + x.id + '\')">' + catTile(x.c, 'sm') + '<span class="main"><span class="t">' + esc(x.c ? x.c.name : 'Bez kategorie') + '</span></span><span class="amt pos">' + money(Math.round(x.v), true) + '</span></button>';
   }).join('') + '</div>';
   h += groupsCard();
   var full = yearStats(y, y === cy ? +curYM().slice(5, 7) : 12).mon, mx = 1;
@@ -3344,8 +3369,44 @@ function vStats(){
   return h + groupsCard();
 }
 
+/* ---------- all movements of one category (Rozbor) ---------- */
+function catTx(id, from, to){
+  var pm = myPayMap(), out = [];
+  S.tx.forEach(function(t){
+    var pk = payExpCat(t), k = pk || t.cat;
+    if (k !== id && !(id === 'none' && !k && (t.type === 'expense' || t.type === 'refund' || t.type === 'income'))) return;
+    if (t.type !== 'expense' && t.type !== 'refund' && t.type !== 'income' && !pk) return;
+    var d = statDate(t, pm) || t.date;
+    if (from && d < from) return; if (to && d > to) return;
+    out.push({t:t, d:d});
+  });
+  return out.sort(function(a, b){ return a.d < b.d ? 1 : a.d > b.d ? -1 : sortTx(a.t, b.t); });
+}
+function catSheet(id, scope){
+  var c = cat(id), year = ui.statMode === 'year', ym = ui.statMonth || curYM(), y = ui.statYear || +curYM().slice(0, 4);
+  scope = scope || (year ? 'year' : 'month');
+  var from = scope === 'month' ? ym + '-01' : scope === 'year' ? y + '-01-01' : '', to = scope === 'month' ? monthEnd(ym) : scope === 'year' ? y + '-12-31' : '';
+  var list = catTx(id, from, to), inc = c && S.cats.income.some(function(x){ return x.id === id; });
+  var sum = list.reduce(function(a, o){ var t = o.t; return a + (t.type === 'refund' ? -czk(t) : czk(t)); }, 0);
+  var seg = '<div class="seg" role="group" aria-label="Období">' + (year
+    ? [['year', 'Rok ' + y], ['all', 'Vše']] : [['month', ymLabel(ym)], ['all', 'Vše']]).map(function(o){ return '<button class="' + (scope === o[0] ? 'on' : '') + '" aria-pressed="' + (scope === o[0]) + '" onclick="App.catSheet(\'' + id + '\',\'' + o[0] + '\')">' + o[1] + '</button>'; }).join('') + '</div>';
+  var body = '';
+  if (!list.length) body = '<div class="empty" style="padding:24px">Žádné pohyby</div>';
+  else if (scope === 'month') body = '<div class="card mt">' + list.map(function(o){ return txRow(o.t, 'cat'); }).join('') + '</div>';
+  else {
+    var groups = [], cur = null;
+    list.slice(0, 400).forEach(function(o){ var k = o.d.slice(0, 7); if (!cur || cur.k !== k) { cur = {k:k, items:[], sum:0}; groups.push(cur); } cur.items.push(o.t); cur.sum += o.t.type === 'refund' ? -czk(o.t) : czk(o.t); });
+    body = groups.map(function(g){ return '<div class="dayhead" style="padding:12px 6px 6px"><span>' + ymLabel(g.k) + '</span><span>' + money(Math.round(g.sum)) + '</span></div><div class="card">' + g.items.map(function(t){ return txRow(t, 'cat'); }).join('') + '</div>'; }).join('') +
+      (list.length > 400 ? '<p class="hint center" style="margin-top:8px">Zobrazeno 400 nejnovějších z ' + list.length + '.</p>' : '');
+  }
+  var nAvg = '';
+  if (scope === 'all' && list.length) { var months = {}; list.forEach(function(o){ months[o.d.slice(0, 7)] = 1; }); var mc = Object.keys(months).length; nAvg = ' · Ø ' + money(Math.round(sum / Math.max(1, mc))) + ' za měsíc'; }
+  openSheet('<div class="shead"><h3>' + catTile(c, 'sm') + '<span class="nm">' + esc(c ? c.name : 'Bez kategorie') + '</span></h3><button class="xbtn2" onclick="App.closeSheet()" aria-label="Zavřít">' + ic('x', 17, 2.4) + '</button></div>' +
+    seg + '<div class="bigv ' + (inc ? 'pos' : '') + '">' + money(Math.round(sum), inc) + '</div><div class="sub">' + list.length + ' ' + pl(list.length, 'pohyb', 'pohyby', 'pohybů') + nAvg + '</div>' + body, null, true);
+}
 /* ---------- init ---------- */
-window.App = {planLinkCh:planLinkCh,
+window.App = {catSheet:catSheet,
+  planLinkCh:planLinkCh,
   planLimits:planLimits,
   budSumLive:budSumLive,
   budUnit:budUnit, budTotalLive:budTotalLive,

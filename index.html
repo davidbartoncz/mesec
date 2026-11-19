@@ -780,6 +780,7 @@ function toggleContrib(type){
   var g = (TYPES[type] || {}).g, on = g === 'invest' || g === 'crypto';
   ['contribRow','contribHint'].forEach(function(id){ var el = document.getElementById(id); if (el) el.style.display = on ? '' : 'none'; });
   var pr = document.getElementById('payExpRow'); if (pr) pr.style.display = type === 'debt' ? '' : 'none';
+  var rr = document.getElementById('rateRow'); if (rr) rr.style.display = type === 'savings' ? '' : 'none';
 }
 function staleDays(g){ return g === 'property' ? 180 : 30; }
 
@@ -1341,6 +1342,7 @@ function accRow(a, bal){
     sub = (t.g === 'property' ? 'odhad z ' : 'hodnota z ') + dateLbl(lv).toLowerCase();
     if (age >= staleDays(t.g)) { stale = true; cls = 'warn'; sub = 'hodnota stará ' + age + ' ' + pl(age, 'den', 'dny', 'dní'); }
   } else if (t.g === 'debt') sub = 'zbývá splatit' + (a.payAsExp ? ' · splátky jako výdaj' : '');
+  else if (a.type === 'savings' && +a.rate > 0) sub = t.n + ' · ' + rateTxt(a.rate);
   var sh = esc(sub);
   if (isGrowth(a) && !stale) { var cb = contrib(a); if (cb > 0) sh = '<span class="' + (bal - cb >= 0 ? 'pos' : 'neg') + '" style="font-weight:700">' + pctStr((bal - cb) / cb) + '</span> · ' + sh; }
   if (c !== 'CZK') sh = hmC(bal, c) + ' · ' + sh;
@@ -1413,7 +1415,7 @@ function accDetail(id){
   var t = tinfo(a), bal = balances()[id], hid = hidden();
   var items = S.tx.filter(function(x){ return x.acc === id || x.to === id; }).sort(sortTx);
   openSheet('<div data-wealth="1"></div><div class="shead"><h3>' + accTile(a) + '<span class="nm">' + esc(a.name) + '</span></h3>' + (eyePill(id) || '<button class="iconbtn" onclick="App.closeSheet()" aria-label="Zavřít">' + ic('x', 22, 2) + '</button>') + '</div>' +
-    '<div class="sub">' + esc(t.n) + '</div><div class="bigv ' + (bal < 0 && !hid ? 'neg' : '') + '">' + hmC(bal, accCur(a)) + '</div>' +
+    '<div class="sub">' + esc(t.n) + (a.type === 'savings' && +a.rate > 0 ? ' · ' + rateTxt(a.rate) + (hid || bal <= 0 ? '' : ' · úrok ≈ ' + moneyC(Math.round(bal * a.rate / 1200), accCur(a)) + ' měsíčně') : '') + '</div><div class="bigv ' + (bal < 0 && !hid ? 'neg' : '') + '">' + hmC(bal, accCur(a)) + '</div>' +
     (accCur(a) !== 'CZK' ? '<div class="sub">' + (hid ? '' : '≈ ' + money(Math.round(bal * fxNow(accCur(a)))) + ' · ') + '1\u00a0' + esc(curSym(accCur(a))) + ' = ' + fmtRate(fxNow(accCur(a))) + '\u00a0' + esc(S.currency) + '</div>' : '') +
     (isGrowth(a) ? (function(){ var cb = contrib(a), gn = bal - cb, cls = gn >= 0 ? 'pos' : 'neg';
       return '<div class="gstats"><div><span class="k">Vloženo</span><b>' + hmC(cb, accCur(a)) + '</b></div><div><span class="k">Zhodnocení</span><b class="' + (hid ? '' : cls) + '">' + hmC(gn, accCur(a), true) + '</b></div><div><span class="k">Výnos</span><b class="' + cls + '">' + (cb > 0 ? pctStr(gn / cb) : '–') + '</b></div></div>'; })() : '') +
@@ -1453,7 +1455,7 @@ function accForm(id){
     '<label class="field"><span id="initLabel">' + initLabel(type) + ' (' + esc(curSym(accCur(a))) + ')</span><input class="inp" name="initial" inputmode="decimal" placeholder="0" value="' + (init === '' ? '' : esc(String(init).replace('.', ','))) + '"></label>' +
     '<label class="field" id="contribRow"' + (isGrowth({type:type}) ? '' : ' style="display:none"') + '><span>Celkem vloženo</span><input class="inp" name="contrib" inputmode="decimal" placeholder="stejné jako hodnota" value="' + (a && a.contrib0 != null ? esc(String(a.contrib0).replace('.', ',')) : '') + '"></label>' +
     '<p class="hint" id="contribHint"' + (isGrowth({type:type}) ? '' : ' style="display:none"') + '>Kolik bylo do účtu vloženo celkem k níže uvedenému dni. Další vklady a výběry se počítají z převodů na účet a z účtu. Z rozdílu oproti hodnotě se počítá zhodnocení.</p>' +
-    payExpBlock(a, type) +
+    payExpBlock(a, type) + rateBlock(a, type) +
     '<label class="field"><span>Ke dni</span><input class="inp" type="date" name="start" required value="' + (a ? a.start : today()) + '"></label>' +
     '<p class="hint">Zůstatek k tomuto dni zahrnuje všechny dřívější pohyby. Zapisují se jen pohyby od tohoto dne.</p>' +
     '<button class="btn" type="submit">' + (a ? 'Uložit' : 'Přidat účet') + '</button>' +
@@ -1473,6 +1475,7 @@ function updateValue(id){
   var debt = a.type === 'debt', bal = balances()[id], g = tinfo(a).g, hid = hidden();
   var cur = debt ? -bal : bal;
   var expl = g === 'receivable' ? 'Kolik zbývá vrátit. Rozdíl se zapíše jako ztráta nebo zisk. Vrácené peníze je přesnější zapsat jako převod na účet.'
+    : a.type === 'savings' ? 'Skutečný zůstatek podle banky.' + (+a.rate > 0 && !hid && cur > 0 ? ' Úrok při ' + rateTxt(a.rate) + ' dělá zhruba ' + moneyC(Math.round(cur * a.rate / 1200), accCur(a)) + ' měsíčně.' : '')
     : g === 'liquid' ? 'Skutečný zůstatek na účtu. Rozdíl se zapíše jako srovnání zůstatku.'
     : debt ? 'Aktuální výše dluhu podle výpisu. Rozdíl se zapíše jako změna závazku.'
     : 'Aktuální tržní hodnota. Rozdíl se zapíše jako zhodnocení nebo ztráta.';
@@ -1481,8 +1484,9 @@ function updateValue(id){
     '<div class="sub">' + esc(a.name) + (hid ? '' : ' · nyní ' + moneyC(cur, accCur(a))) + '</div><p class="hint" style="margin:8px 4px 0">' + expl + '</p>' +
     '<label class="field"><span>Nová hodnota (' + esc(curSym(accCur(a))) + ')</span><input class="inp disp" style="font-size:28px;font-weight:700;text-align:center" name="val" inputmode="decimal" placeholder="0" value="' + (hid ? '' : esc(String(Math.round(cur * 100) / 100).replace('.', ','))) + '"></label>' +
     (isGrowth(a) ? '<label class="field"><span>Celkem vloženo (' + esc(curSym(accCur(a))) + ')</span><input class="inp" name="contrib" inputmode="decimal" placeholder="beze změny" value="' + (hid ? '' : esc(String(contrib(a)).replace('.', ','))) + '"></label><p class="hint">Vklady se počítají automaticky z převodů na účet. Tady lze součet opravit.</p>' : '') +
+    (a.type === 'savings' ? '<label class="toggle"><input type="checkbox" name="asint" checked onchange="var n=this.form.elements.note;if(n.value===\'Úrok\'||n.value===\'Srovnání zůstatku\')n.value=this.checked?\'Úrok\':\'Srovnání zůstatku\'"><span>Navýšení zapsat jako úrok (příjem)</span></label>' : '') +
     '<label class="field"><span>Ke dni</span><input class="inp" type="date" name="date" required value="' + today() + '"></label>' +
-    '<label class="field"><span>Poznámka</span><input class="inp" name="note" value="' + (g === 'liquid' ? 'Srovnání zůstatku' : g === 'debt' ? 'Aktualizace dluhu' : g === 'receivable' ? 'Úprava pohledávky' : 'Přecenění') + '"></label>' +
+    '<label class="field"><span>Poznámka</span><input class="inp" name="note" value="' + (a.type === 'savings' ? 'Úrok' : g === 'liquid' ? 'Srovnání zůstatku' : g === 'debt' ? 'Aktualizace dluhu' : g === 'receivable' ? 'Úprava pohledávky' : 'Přecenění') + '"></label>' +
     '<button class="btn" type="submit">Uložit hodnotu</button><button class="btn ghost" type="button" onclick="App.accDetail(\'' + id + '\')">Zpět</button></form>',
     function(){ setTimeout(function(){ var i = document.querySelector('#valf [name=val]'); if (i) { i.focus(); i.select(); } }, 60); });
 }
@@ -2509,6 +2513,7 @@ function saveAcc(e, id){
   else S.accounts.push({id:uid(), name:name, type:type, initial:init, start:start, cur:cur});
   var tgt = id ? acc(id) : S.accounts[S.accounts.length - 1], tg = (TYPES[type] || {}).g;
   if (f.contrib && (tg === 'invest' || tg === 'crypto')) { var cv = parseAmt(f.contrib.value); if (isFinite(cv)) { if (cv !== tgt.contrib0) tgt.contribAdj = 0; tgt.contrib0 = cv; } else { delete tgt.contrib0; tgt.contribAdj = 0; } }
+  if (type === 'savings' && f.irate) { var ir = parseAmt(f.irate.value); if (isFinite(ir) && ir > 0) tgt.rate = Math.round(ir * 100) / 100; else delete tgt.rate; } else delete tgt.rate;
   if (type === 'debt') { tgt.payAsExp = !!(f.payexp && f.payexp.checked); if (f.paycat) tgt.payCat = f.paycat.value; } else { delete tgt.payAsExp; delete tgt.payCat; }
   if (cur !== 'CZK') setTimeout(function(){ fetchRates(false); }, 50);
   if (type === 'meal' && !S.cats.income.some(function(c){ return /strav/i.test(c.name); })) S.cats.income.push({id:uid(), name:'Stravenky', icon:'🍽️'});
@@ -2530,7 +2535,12 @@ function delAcc(id){
   save(); closeSheet(); render(); toast('Účet smazán');
 }
 
-function valueLabel(a){ var g = tinfo(a).g; return g === 'debt' ? 'Aktualizovat dluh' : g === 'liquid' ? 'Srovnat zůstatek' : g === 'receivable' ? 'Upravit pohledávku' : 'Aktualizovat hodnotu'; }
+function rateTxt(r){ return String(Math.round(+r * 100) / 100).replace('.', ',') + '\u00a0% p.a.'; }
+function intCat(){ var c = S.cats.income.filter(function(x){ return /úrok/i.test(x.name); })[0]; return (c || S.cats.income[0] || {}).id || ''; }
+function rateBlock(a, type){
+  return '<div id="rateRow"' + (type === 'savings' ? '' : ' style="display:none"') + '><label class="field"><span>Úroková sazba (% p.a.)</span><input class="inp" name="irate" inputmode="decimal" placeholder="nevyplněno" value="' + (a && +a.rate > 0 ? String(a.rate).replace('.', ',') : '') + '"></label></div>';
+}
+function valueLabel(a){ var g = tinfo(a).g; return g === 'debt' ? 'Aktualizovat dluh' : a.type === 'savings' ? 'Aktualizovat zůstatek' : g === 'liquid' ? 'Srovnat zůstatek' : g === 'receivable' ? 'Upravit pohledávku' : 'Aktualizovat hodnotu'; }
 
 function saveValue(e, id){
   e.preventDefault();
@@ -2541,7 +2551,8 @@ function saveValue(e, id){
   if (a.type === 'debt') v = -Math.abs(v);
   var delta = Math.round((v - balances(date)[id])*100)/100;
   if (Math.abs(delta) < 0.005) { if (cchg) { save(); render(); } toast(cchg ? 'Vklady upraveny' : 'Hodnota se nezměnila.'); accDetail(id); return; }
-  S.tx.push({id:uid(), date:date, type:'reval', amount:delta, acc:id, note:f.note.value.trim()});
+  if (a.type === 'savings' && f.asint && f.asint.checked && delta > 0 && intCat()) S.tx.push({id:uid(), date:date, type:'income', amount:delta, acc:id, cat:intCat(), note:f.note.value.trim() || 'Úrok'});
+  else S.tx.push({id:uid(), date:date, type:'reval', amount:delta, acc:id, note:f.note.value.trim()});
   save(); render(); accDetail(id);
   toast('Uloženo: ' + (delta > 0 ? '+' : '−') + NF.format(Math.abs(delta)) + ' ' + curSym(accCur(a)));
 }
@@ -2981,7 +2992,7 @@ function planCard(ym){
   h += '<div class="crow"><div class="cr1"><span class="cn"><i style="background:transparent;border:1.5px solid var(--mut)"></i>Příjmy' + (c.expected > c.actual ? ' <small>očekávané, připsáno ' + money(Math.round(c.actual)) + '</small>' : '') + '</span><b class="pos">' + money(Math.round(c.inc), true) + '</b></div></div>';
   var tol = function(v){ return Math.max(1, v * 0.005); };
   if (c.bud > 0) {
-    var bp = c.budAct / c.bud, bst = c.budAct > c.bud + tol(c.bud) ? {cls:'neg', txt:'přečerpáno o ' + money(Math.round(c.budAct - c.bud))}
+    var bp = c.budAct / c.bud, bst = c.budAct > c.bud + tol(c.bud) ? {cls:'neg', txt:'utraceno ' + money(Math.round(c.budAct))}
       : c.cur && c.pace !== null && bp > c.pace + 0.05 ? {cls:'warn', txt:'rychlejší tempo'}
       : {cls:'pos', txt:'utraceno ' + money(Math.round(c.budAct))};
     h += cmpRow('var(--cn)', 'Rozpočet výdajů', pctTxt(c.bud / Math.max(1, c.inc) * 100), c.bud, c.budAct, bst, bp, c.cur ? c.pace : null);
@@ -2991,7 +3002,7 @@ function planCard(ym){
     var note = x.auto ? 'zbytek' : x.pct ? pctTxt(x.pct) : (c.inc > 0 ? pctTxt(x.amount / c.inc * 100) : ''), s2 = null, pp = x.amount > 0 ? x.actual / x.amount : 0;
     if (x.kind === 'invest' || x.kind === 'save' || x.kind === 'debt') {
       if (x.amount <= 0 && x.actual <= 0.5) s2 = null;
-      else if (x.actual > x.amount + tol(x.amount)) s2 = {cls:'pos', txt:'nad plán o ' + money(Math.round(x.actual - x.amount))};
+      else if (x.actual > x.amount + tol(x.amount)) s2 = {cls:'pos', txt:(x.kind === 'debt' ? 'splaceno ' : 'převedeno ') + money(Math.round(x.actual))};
       else if (x.actual >= x.amount - tol(x.amount)) s2 = {cls:'pos', txt:x.kind === 'debt' ? '✓ splaceno' : '✓ splněno'};
       else s2 = {cls:c.past ? 'neg' : 'warn', txt:'chybí ' + money(Math.round(x.amount - Math.max(0, x.actual)))};
     } else if (x.link && x.link.slice(0, 4) === 'sub:') {
@@ -3001,7 +3012,7 @@ function planCard(ym){
     } else if (x.link) {
       var ln = x.link.slice(0, 4) === 'grp:' ? (grpById(x.link.slice(4)) || {}).name : (cat(x.link.slice(4)) || {}).name;
       note = (note ? note + ' · ' : '') + esc(ln || '');
-      s2 = x.actual > x.amount + tol(x.amount) ? {cls:'neg', txt:'přečerpáno o ' + money(Math.round(x.actual - x.amount))} : {cls:'pos', txt:'čerpáno ' + money(Math.round(Math.max(0, x.actual)))};
+      s2 = x.actual > x.amount + tol(x.amount) ? {cls:'neg', txt:'čerpáno ' + money(Math.round(x.actual))} : {cls:'pos', txt:'čerpáno ' + money(Math.round(Math.max(0, x.actual)))};
     }
     h += cmpRow(PLANCOL[x.kind] || PLANCOL.other, esc(x.name), note, x.amount, x.actual, s2, s2 ? pp : 0);
   });
@@ -3227,8 +3238,9 @@ function homePlan(){
     var s2;
     if (x.kind === 'other' && !x.link) s2 = {cls:'mute', txt:money(Math.round(x.amount))};
     else if (x.kind === 'other' && x.link.slice(0, 4) === 'sub:') s2 = x.actual >= x.amount - tol(x.amount) && x.amount > 0 ? {cls:'pos', txt:'✓ zaplaceno'} : {cls:c.past ? 'neg' : 'mute', txt:c.past ? 'nezaplaceno' : 'čeká'};
-    else if (x.kind === 'other') s2 = x.actual > x.amount + tol(x.amount) ? {cls:'neg', txt:'přes o ' + money(Math.round(x.actual - x.amount))} : {cls:x.actual >= x.amount - tol(x.amount) ? 'pos' : 'mute', txt:money(Math.round(Math.max(0, x.actual))) + ' z ' + money(Math.round(x.amount))};
+    else if (x.kind === 'other') s2 = x.actual > x.amount + tol(x.amount) ? {cls:'neg', txt:money(Math.round(x.actual)) + ' z ' + money(Math.round(x.amount))} : {cls:x.actual >= x.amount - tol(x.amount) ? 'pos' : 'mute', txt:money(Math.round(Math.max(0, x.actual))) + ' z ' + money(Math.round(x.amount))};
     else if (x.amount <= 0) return;
+    else if (x.actual > x.amount + tol(x.amount)) s2 = {cls:'pos', txt:'✓ ' + money(Math.round(x.actual))};
     else if (x.actual >= x.amount - tol(x.amount)) s2 = {cls:'pos', txt:x.kind === 'debt' ? '✓ splaceno' : '✓ splněno'};
     else s2 = {cls:c.past ? 'neg' : 'warn', txt:'chybí ' + money(Math.round(x.amount - Math.max(0, x.actual)))};
     rows.push([PLANCOL[x.kind] || PLANCOL.other, esc(x.name), s2]);

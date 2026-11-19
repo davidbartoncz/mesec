@@ -1029,9 +1029,9 @@ function homeTodosBase(){
     var age = daysBetween(lastVal(a), t);
     if (age >= staleDays(g)) out.push({tile:tileHtml('var(--ca)', ic('trend', 17), 'sm'), title:esc(a.name), sub:'hodnota je stará ' + age + ' ' + pl(age, 'den', 'dny', 'dní'), btn:'Aktualizovat', act:'App.updateValue(\'' + a.id + '\')'});
   });
-  var bcs = budgetCats(), mnow = monthStats(curYM()), lcs = planLinkedCats(curYM());
+  var bcs = budgetCats(), mnow = monthStats(curYM()), lcs = planLinkedCats(curYM()), lss = planSubSpend(curYM());
   Object.keys(bcs).forEach(function(k){
-    var sp = mnow.byCat[k] || 0; if (sp <= bcs[k] || lcs[k]) return;
+    var sp = (mnow.byCat[k] || 0) - (lss[k] || 0); if (sp <= bcs[k] || lcs[k]) return;
     out.push({tile:catTile(cat(k), 'sm'), title:esc(cat(k).name), sub:'přes rozpočet o ' + money(Math.round(sp - bcs[k])), btn:'Rozpočet', act:'App.goBudget()'});
   });
   if (S.tx.length >= 5) {
@@ -1841,6 +1841,27 @@ function budgetTotal(ym, inc){
 }
 /* Own share of recurring payments still to be paid this month (budgeted categories, or all with an overall budget). */
 /* Categories that a month's plan covers with their own item ("Bydlení" linked to a plan item, etc.). */
+/* Recurring payments that a month's plan covers with their own item. */
+function planLinkedSubs(ym){
+  var p = planOf(ym), o = {};
+  if (p) (p.items || []).forEach(function(x){ if (x.link && x.link.slice(0, 4) === 'sub:') o[x.link.slice(4)] = 1; });
+  return o;
+}
+/* Own share of a recurring payment due in a month (several occurrences for weekly payments). */
+function subMonthShare(x, ym){
+  var v = 0; dues(x, monthEnd(ym)).forEach(function(d){ if (d.slice(0, 7) === ym) v += Math.max(0, myShare(x)) * fxNow(accCur(acc(x.acc))); });
+  return v;
+}
+/* Spending of plan-linked recurring payments by category (own payment minus shares from others). */
+function planSubSpend(ym){
+  var ls = planLinkedSubs(ym), o = {}, pm = myPayMap();
+  S.tx.forEach(function(t){
+    if (!t.sub || !ls[t.sub] || (t.type !== 'expense' && t.type !== 'refund')) return;
+    var d = statDate(t, pm); if (!d || d.slice(0, 7) !== ym) return;
+    var k = t.cat || 'none'; o[k] = (o[k] || 0) + (t.type === 'expense' ? czk(t) : -czk(t));
+  });
+  return o;
+}
 function planLinkedCats(ym){
   var p = planOf(ym), o = {};
   if (p) (p.items || []).forEach(function(x){ if (x.link && x.link.slice(0, 4) === 'cat:') o[x.link.slice(4)] = 1; });
@@ -1850,7 +1871,7 @@ function reservedSubs(ym){
   var r = {total:0, byCat:{}, names:[]}; if (ym !== curYM()) return r;
   var bc = budgetCats(), all = hasTotal(), lc = planLinkedCats(ym);
   (S.subs || []).forEach(function(x){
-    if (x.end || !(all || bc[x.cat]) || lc[x.cat]) return;
+    if (x.end || !(all || bc[x.cat]) || lc[x.cat] || planLinkedSubs(ym)[x.id]) return;
     dues(x, monthEnd(ym)).forEach(function(d){
       if (d.slice(0, 7) !== ym || myTx(x.id, d)) return;
       var v = Math.max(0, myShare(x)) * fxNow(accCur(acc(x.acc)));
@@ -1866,7 +1887,7 @@ function subPaidDaily(ym){
   for (i = 0; i < dim; i++) arr.push(0);
   S.tx.forEach(function(t){
     if (!t.sub || (t.type !== 'expense' && t.type !== 'refund')) return;
-    var x = subById(t.sub); if (!x || !(all || bc[x.cat]) || planLinkedCats(ym)[x.cat]) return;
+    var x = subById(t.sub); if (!x || !(all || bc[x.cat]) || planLinkedCats(ym)[x.cat] || planLinkedSubs(ym)[x.id]) return;
     var d = statDate(t, pm); if (!d || d.slice(0, 7) !== ym) return;
     arr[+d.slice(8, 10) - 1] += t.type === 'expense' ? czk(t) : -czk(t);
   });
@@ -1918,7 +1939,7 @@ function paceTiles(o, mon){
     '<div class="rowsb small mute" style="font-weight:600;margin-top:8px"><span>Týden ' + o.week.from + '.–' + o.week.to + '. ' + mon + '.: utraceno ' + money(Math.round(o.week.spent)) + '</span><span>z ' + money(Math.floor(o.week.budget)) + '</span></div>';
 }
 function vBudgetBase(){
-  var ym = ui.budMonth || curYM(), cur = curYM(), m = monthStats(ym), bp0 = budgetPace(ym), tot = bp0 ? bp0.tot : budgetTotal(ym), spentB = bp0 ? bp0.spent : m.exp, bc = budgetCats(), pace = monthPace(ym), resv = reservedSubs(ym), lcats = planLinkedCats(ym);
+  var ym = ui.budMonth || curYM(), cur = curYM(), m = monthStats(ym), bp0 = budgetPace(ym), tot = bp0 ? bp0.tot : budgetTotal(ym), spentB = bp0 ? bp0.spent : m.exp, bc = budgetCats(), pace = monthPace(ym), resv = reservedSubs(ym), lcats = planLinkedCats(ym), lsp = planSubSpend(ym);
   var nm = MONTHS[+ym.slice(5, 7) - 1]; nm = nm[0].toUpperCase() + nm.slice(1) + (ym.slice(0, 4) !== cur.slice(0, 4) ? ' ' + ym.slice(2, 4) : '');
   var sw = '<div class="mswitch"><button onclick="App.budMonth(-1)" aria-label="Předchozí měsíc">' + ic('chevL', 15, 2.4) + '</button><span>' + nm + '</span><button onclick="App.budMonth(1)" aria-label="Další měsíc"' + (ym >= cur ? ' style="opacity:.35"' : '') + '>' + ic('chevR', 15, 2.4) + '</button></div>';
   var h = hdr('Rozpočet', sw, true);
@@ -1951,12 +1972,12 @@ function vBudgetBase(){
   h += '</section>';
   var ids = Object.keys(bc).filter(function(k){ return !lcats[k]; }).sort(function(a, b){ return (m.byCat[b] || 0) / bc[b] - (m.byCat[a] || 0) / bc[a]; });
   if (ids.length) h += '<div class="card mt"><div class="ch2"><h2>Kategorie</h2><span class="r">utraceno z limitu</span></div>' + ids.map(function(k){
-    var c = cat(k), sp = Math.max(0, m.byCat[k] || 0), lim = bc[k], pp = sp / lim, rv = resv.byCat[k] || 0, lf = lim - sp - rv;
+    var c = cat(k), sp = Math.max(0, (m.byCat[k] || 0) - (lsp[k] || 0)), lim = bc[k], pp = sp / lim, rv = resv.byCat[k] || 0, lf = lim - sp - rv;
     return '<button class="brow" onclick="App.budgetForm()"><span class="top">' + catTile(c, 'sm') + '<span class="main"><span class="t">' + esc(c.name) + '</span><span class="s">' + money(Math.round(sp)) + ' z ' + money(lim) + (rv > 0.5 ? ' · rezervováno ' + money(Math.round(rv)) : '') + '</span></span>' +
       '<span class="amt" style="color:' + (lf < 0 ? 'var(--neg)' : 'inherit') + '">' + (lf >= 0 ? money(Math.round(lf)) : '−' + money(Math.round(-lf))) + '</span></span>' + bbar(pp, pace) + '</button>';
   }).join('') + '</div>';
-  var free = Object.keys(m.byCat).filter(function(k){ return !bc[k] && !lcats[k] && m.byCat[k] > 0.5; }).sort(function(a, b){ return m.byCat[b] - m.byCat[a]; });
-  if (free.length && ids.length) h += '<div class="card mt"><div class="ch2"><h2>Bez limitu</h2><span class="r">' + money(Math.round(free.reduce(function(s, k){ return s + m.byCat[k]; }, 0))) + '</span></div>' + free.map(function(k){
+  var free = Object.keys(m.byCat).filter(function(k){ return !bc[k] && !lcats[k] && (m.byCat[k] || 0) - (lsp[k] || 0) > 0.5; }).sort(function(a, b){ return m.byCat[b] - m.byCat[a]; });
+  if (free.length && ids.length) h += '<div class="card mt"><div class="ch2"><h2>Bez limitu</h2><span class="r">' + money(Math.round(free.reduce(function(s, k){ return s + m.byCat[k] - (lsp[k] || 0); }, 0))) + '</span></div>' + free.map(function(k){
     var c = cat(k); return '<div class="row">' + catTile(c, 'sm') + '<span class="main"><span class="t">' + esc(c ? c.name : 'Bez kategorie') + '</span></span><span class="amt">' + money(Math.round(m.byCat[k])) + '</span></div>';
   }).join('') + '</div>';
   if (tot > 0) h += '<div class="pad" style="margin-top:14px"><button class="btn ghost" onclick="App.budgetForm()">Upravit rozpočet</button></div>';
@@ -2869,7 +2890,7 @@ function planCalc(ym){
   var items = (p.items || []).map(function(x){ return {kind:x.kind, name:x.name, pct:!x.auto && +x.pct > 0 ? +x.pct : 0, auto:!!x.auto, amount:x.auto ? 0 : planAmt(x, inc), link:x.link || '', actual:0}; });
   var subsPlan = 0, subsIds = {};
   if (!totalOnly) (S.subs || []).forEach(function(x){
-    if (x.end || bc[x.cat]) return;
+    if (x.end || bc[x.cat] || items.some(function(y){ return y.link === 'sub:' + x.id; })) return;
     dues(x, monthEnd(ym)).forEach(function(d){ if (d.slice(0, 7) === ym) { subsPlan += Math.max(0, myShare(x)) * fxNow(accCur(acc(x.acc))); subsIds[x.id] = 1; } });
   });
   var fixed = items.reduce(function(s, x){ return s + (x.auto ? 0 : x.amount); }, 0), autoIt = items.filter(function(x){ return x.auto; })[0];
@@ -2888,8 +2909,8 @@ function planCalc(ym){
     if (t.type !== 'expense' && t.type !== 'refund' && !pe) return;
     var sd = statDate(t, pm); if (!sd || sd.slice(0, 7) !== ym) return;
     var v = t.type === 'refund' ? -czk(t) : czk(t), tc = pe || t.cat, grp = t.grp || (t.type === 'refund' && refTx(t) ? refTx(t).grp : '');
-    var it = null;
-    if (grp) it = items.filter(function(x){ return x.link === 'grp:' + grp; })[0] || null;
+    var it = t.sub ? items.filter(function(x){ return x.link === 'sub:' + t.sub; })[0] || null : null;
+    if (!it && grp) it = items.filter(function(x){ return x.link === 'grp:' + grp; })[0] || null;
     if (!it && tc) it = items.filter(function(x){ return x.link === 'cat:' + tc; })[0] || null;
     if (it) { it.actual += v; return; }
     if (t.sub && subsIds[t.sub]) { subsAct += v; return; }
@@ -2973,6 +2994,10 @@ function planCard(ym){
       else if (x.actual > x.amount + tol(x.amount)) s2 = {cls:'pos', txt:'nad plán o ' + money(Math.round(x.actual - x.amount))};
       else if (x.actual >= x.amount - tol(x.amount)) s2 = {cls:'pos', txt:x.kind === 'debt' ? '✓ splaceno' : '✓ splněno'};
       else s2 = {cls:c.past ? 'neg' : 'warn', txt:'chybí ' + money(Math.round(x.amount - Math.max(0, x.actual)))};
+    } else if (x.link && x.link.slice(0, 4) === 'sub:') {
+      var sxx = subById(x.link.slice(4));
+      if (sxx && x.name !== sxx.name) note = (note ? note + ' · ' : '') + esc(sxx.name);
+      s2 = x.actual >= x.amount - tol(x.amount) && x.amount > 0 ? {cls:'pos', txt:'✓ zaplaceno'} : x.actual > 0.5 ? {cls:c.past ? 'neg' : 'warn', txt:'zaplaceno ' + money(Math.round(x.actual))} : {cls:c.past ? 'neg' : 'mute', txt:c.past ? 'nezaplaceno' : 'čeká'};
     } else if (x.link) {
       var ln = x.link.slice(0, 4) === 'grp:' ? (grpById(x.link.slice(4)) || {}).name : (cat(x.link.slice(4)) || {}).name;
       note = (note ? note + ' · ' : '') + esc(ln || '');
@@ -3003,6 +3028,8 @@ function planForm(){
 function linkOpts(sel){
   var o = '<option value="">Nepropojovat</option><optgroup label="Kategorie">' + S.cats.expense.map(function(c){ return '<option value="cat:' + c.id + '"' + (sel === 'cat:' + c.id ? ' selected' : '') + '>' + esc(c.name) + '</option>'; }).join('') + '</optgroup>';
   if ((S.groups || []).length) o += '<optgroup label="Skupiny">' + S.groups.map(function(g){ return '<option value="grp:' + g.id + '"' + (sel === 'grp:' + g.id ? ' selected' : '') + '>' + esc(g.name) + '</option>'; }).join('') + '</optgroup>';
+  var subs = (S.subs || []).filter(function(x){ return !x.end || sel === 'sub:' + x.id; });
+  if (subs.length) o += '<optgroup label="Pravidelné platby">' + subs.map(function(x){ return '<option value="sub:' + x.id + '"' + (sel === 'sub:' + x.id ? ' selected' : '') + '>' + esc(x.name) + '</option>'; }).join('') + '</optgroup>';
   return o;
 }
 /* Debt accounts that can be planned for a month: open ones, and ones closed during that month or later (a debt paid off this month still belongs in its plan). */
@@ -3037,7 +3064,7 @@ function planSheetRender(){
       '<input class="inp pa" inputmode="decimal" value="' + esc(String(au ? '' : x.amount || '')) + '" placeholder="' + (au ? 'zbytek' : '0') + '"' + (au ? ' readonly' : '') + ' aria-label="Částka" oninput="App.planCalcLive()">' +
       (fixed ? '<span style="width:34px;flex:none"></span>' : '<button type="button" class="xbtn sm" onclick="App.planDelRow(' + i + ')" aria-label="Odebrat">×</button>') + '</div>' +
       '<div class="psub">' + unitSw(i, x.unit, true) + '<span class="pcalc" id="pc' + i + '"></span></div>' +
-      (x.kind === 'other' ? '<label class="plink"><span>Sledovat čerpání podle</span><select class="inp pl plk" aria-label="Propojit položku s kategorií nebo skupinou">' + linkOpts(x.link) + '</select></label>' : '') + '</div>';
+      (x.kind === 'other' ? '<label class="plink"><span>Sledovat čerpání podle</span><select class="inp pl plk" data-i="' + i + '" onchange="App.planLinkCh(this)" aria-label="Propojit položku s kategorií, skupinou nebo pravidelnou platbou">' + linkOpts(x.link) + '</select></label>' : '') + '</div>';
   }).join('');
   var subsInfo = planCalcPreview(d.ym), hasDebt = planDebtAccs(d.ym).length > 0;
   openSheet('<form id="planf" onsubmit="App.savePlan(event)" autocomplete="off"><div class="shead"><h3>Plán z výplaty</h3><button type="button" class="xbtn2" onclick="App.closeSheet()" aria-label="Zavřít">' + ic('x', 17, 2.4) + '</button></div>' +
@@ -3097,6 +3124,18 @@ function planUnit(i, u){
     if (isFinite(v) && v > 0 && inc > 0) x.amount = u === '%' ? String(Math.round(v / inc * 1000) / 10).replace('.', ',') : String(Math.round(inc * v / 100));
   }
   x.unit = u;
+  planSheet();
+}
+function planLinkCh(el){
+  readPlan();
+  var i = +el.getAttribute('data-i'), x = ui.pd.items[i], v = el.value; if (!x) return;
+  if (v.slice(0, 4) === 'sub:') {
+    var sx = subById(v.slice(4));
+    if (sx) {
+      if (!(x.name || '').trim()) x.name = sx.name;
+      if (!(parseAmt(x.amount) > 0) && x.unit !== 'auto') { x.unit = 'Kč'; x.amount = String(Math.round(subMonthShare(sx, ui.pd.ym))); }
+    }
+  }
   planSheet();
 }
 function planLimits(){ readPlan(); var sh = document.querySelector('.sheet'); ui.pdKeep = sh ? sh.scrollTop : 0; ui.planReturn = true; ui.budUnit = ui.pd.bud.unit; ui.budUnitKeep = true; ui.budTotalVal = ui.pd.bud.val; budgetForm(); }
@@ -3187,6 +3226,7 @@ function homePlan(){
     if (x.kind === 'save' && x.auto) return;
     var s2;
     if (x.kind === 'other' && !x.link) s2 = {cls:'mute', txt:money(Math.round(x.amount))};
+    else if (x.kind === 'other' && x.link.slice(0, 4) === 'sub:') s2 = x.actual >= x.amount - tol(x.amount) && x.amount > 0 ? {cls:'pos', txt:'✓ zaplaceno'} : {cls:c.past ? 'neg' : 'mute', txt:c.past ? 'nezaplaceno' : 'čeká'};
     else if (x.kind === 'other') s2 = x.actual > x.amount + tol(x.amount) ? {cls:'neg', txt:'přes o ' + money(Math.round(x.actual - x.amount))} : {cls:x.actual >= x.amount - tol(x.amount) ? 'pos' : 'mute', txt:money(Math.round(Math.max(0, x.actual))) + ' z ' + money(Math.round(x.amount))};
     else if (x.amount <= 0) return;
     else if (x.actual >= x.amount - tol(x.amount)) s2 = {cls:'pos', txt:x.kind === 'debt' ? '✓ splaceno' : '✓ splněno'};
@@ -3293,7 +3333,8 @@ function vStats(){
 }
 
 /* ---------- init ---------- */
-window.App = {planLimits:planLimits,
+window.App = {planLinkCh:planLinkCh,
+  planLimits:planLimits,
   budSumLive:budSumLive,
   budUnit:budUnit, budTotalLive:budTotalLive,
   grpPick:grpPick, grpSet:grpSet, grpNewInline:grpNewInline, grpDetail:grpDetail, grpForm:grpForm, saveGrp:saveGrp, delGrp:delGrp, grpActive:grpActive, grpAdd:grpAdd, grpToggleTx:grpToggleTx,
